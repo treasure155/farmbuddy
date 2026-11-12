@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "FarmBuddy",
+  "version": "1.0.5",
+  "identifier": "online.techalphahub.farmbuddy",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "FarmBuddy",
+        "width": 1320,
+        "height": 840,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' asset: data: blob:; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "dmg",
+      "app",
+      "msi",
+      "nsis"
+    ],
+    "category": "Business",
+    "publisher": "TechAlpha Global Concept",
+    "copyright": "© 2026 TechAlpha Global Concept",
+    "shortDescription": "Offline farm management and advisory",
+    "longDescription": "FarmBuddy is an offline agricultural management and advisory system for livestock, poultry, fish, crops and produce processing, with inventory, point of sale, receipts, expenses and farm reports. English and Ibibio. By TechAlpha Hub.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/treasure155/farmbuddy/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ5QTY3Q0MzQzY4MjE4QkEKUldTNkdJTEd3M3ltU2FOV0tna2NhT1dmSVEveWUvSjkwYnBoSnVTaUZML0ZoR3oxam1HMGNGNnQK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

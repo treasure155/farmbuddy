@@ -1,0 +1,32 @@
+/* Only the receipt in #print-area is printed. Page size is injected per print
+   (58 mm, 80 mm or A4) by lib/receipt.ts. */
+#print-area { display: none; }
+
+@media print {
+  html, body { height: auto; overflow: visible; background: #fff !important; }
+  body > *:not(#print-area) { display: none !important; }
+  #print-area { display: block !important; }
+  .slip {
+    box-shadow: none !important; max-width: none !important; width: 100% !important; padding: 0 !important;
+    color: #000 !important; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .slip-58 { font-size: 10.5px !important; }
+  .slip-80 { font-size: 12px !important; }
+  .slip-a4 { font-size: 12.5px !important; max-width: 160mm !important; margin: 0 auto; }
+  .slip-a4 .slip-head h3 { font-size: 20px; }
+  .slip-head p, .slip-calc { color: #000 !important; }
+  .slip-row, .slip-line { break-inside: avoid; }
+  .guide-print { font: 10.5pt/1.5 'Plus Jakarta Sans', Arial, sans-serif; color: #000; }
+  .guide-print h1 { font-size: 20pt; margin-bottom: 6mm; }
+  .guide-print section { break-before: page; }
+  .guide-print section:first-of-type { break-before: auto; }
+  .guide-print h2 { font-size: 15pt; margin: 0 0 3mm; }
+  .guide-print h3 { font-size: 12pt; margin: 4mm 0 2mm; }
+  .guide-print table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
+  .guide-print th, .guide-print td { border: 1px solid #999; padding: 1.5mm 2mm; text-align: left; vertical-align: top; }
+  .guide-print img { max-width: 100%; }
+  .guide-print .guide-note { border-left: 3px solid #000; padding-left: 3mm; }
+  .key-sheet { font: 13pt/1.5 'Plus Jakarta Sans', Arial, sans-serif; color: #000; max-width: 150mm; }
+  .key-sheet h1 { font-size: 20pt; margin-bottom: 4mm; }
+  .key-sheet-key { font: 700 26pt 'Courier Prime', monospace; letter-spacing: .08em; border: 2px dashed #000; padding: 8mm; margin: 8mm 0; text-align: center; }
+}

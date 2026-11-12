@@ -1,0 +1,167 @@
+/* ---------------------------------------------------------------- FarmBuddy farm screens
+   Uses the eStock tokens (base.css): --brand (harvest orange actions), --nav (forest green),
+   surfaces, lines and the ok / warn / bad tones. Works in light and dark mode. */
+
+.stack-lg { display: flex; flex-direction: column; gap: 20px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-text); }
+.req { color: var(--bad); }
+.is-muted td { color: var(--muted); }
+.field.inline { flex-direction: row; align-items: center; gap: 8px; }
+.field.inline > span { white-space: nowrap; }
+.pill-review { background: var(--brand-soft); color: var(--brand-text); border: 1px solid var(--brand-line); }
+
+/* Home: farm today */
+.farm-setup { align-items: center; }
+.farm-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow-1); }
+.farm-card > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.farm-card h2 { font-size: 16px; }
+.farm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.farm-stat { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; text-align: left; background: var(--surface-2); border: 1px solid var(--line); border-left: 4px solid var(--nav); border-radius: var(--r); color: var(--ink); }
+.farm-stat:hover { border-color: var(--line-strong); border-left-color: var(--nav); }
+.farm-stat small { color: var(--muted); font-weight: 600; font-size: 12px; }
+.farm-stat b { font-size: 22px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.farm-stat span { font-size: 12px; color: var(--ink-2); }
+.farm-stat.is-warn { border-left-color: var(--warn); }
+.farm-stat.is-bad { border-left-color: var(--bad); }
+.farm-stat.is-bad span { color: var(--bad); font-weight: 600; }
+.farm-reminders { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.farm-reminders h3 { font-size: 13px; color: var(--muted); }
+.farm-reminders ul, .reminder-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.farm-reminders li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.farm-reminders li small { color: var(--muted); }
+.farm-reminders li.is-overdue small { color: var(--bad); font-weight: 600; }
+.rem-check { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--line-strong); background: var(--surface); color: transparent; display: inline-grid; place-items: center; padding: 0; }
+.rem-check:hover { border-color: var(--ok); color: var(--ok); }
+.rem-check.is-checked { background: var(--ok); border-color: var(--ok); color: #fff; }
+.farm-low { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--warn); }
+
+/* Onboarding wizard */
+.wizard { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.wizard-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.wizard-steps li { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--surface-3); }
+.wizard-steps li span { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); font-size: 11px; }
+.wizard-steps li.is-on { background: var(--nav); color: var(--nav-ink); }
+.wizard-steps li.is-on span { background: var(--brand); color: var(--brand-ink); }
+.wizard-steps li.is-done { color: var(--ok); }
+.wizard-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px 26px; box-shadow: var(--shadow-1); }
+.wizard-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.wizard-head h2 { font-size: 22px; width: 100%; order: 2; }
+.wizard-head .lang-switch { order: 1; margin-left: auto; }
+.q-field { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.q-field legend { font-weight: 700; font-size: 15px; padding: 0; margin-bottom: 4px; }
+.q-field > small { color: var(--muted); }
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.choice { position: relative; cursor: pointer; }
+.choice input { position: absolute; opacity: 0; pointer-events: none; }
+.choice > span { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 14px; border: 1.5px solid var(--line-strong); border-radius: var(--r); background: var(--surface); font-weight: 600; }
+.choice > span .ic { color: transparent; flex: none; border: 1.5px solid var(--line-strong); border-radius: 4px; width: 18px; height: 18px; padding: 1px; }
+.choice input:checked + span { background: var(--ok-soft); border-color: var(--ok); color: var(--ink); }
+.choice input:checked + span .ic { color: #fff; background: var(--ok); border-color: var(--ok); }
+.choice input:focus-visible + span { box-shadow: var(--focus); }
+.wizard-actions { justify-content: space-between; }
+.done-card { align-items: flex-start; }
+.done-mark { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--ok-soft); color: var(--ok); }
+.done-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.done-list li { display: flex; gap: 8px; align-items: center; }
+.done-list .ic { color: var(--ok); }
+
+/* My Farm */
+.farm-tile { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--nav); border-radius: var(--r-lg); }
+.farm-tile.is-closed { opacity: .7; border-left-color: var(--line-strong); }
+.farm-tile-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 15px; }
+
+/* Livestock, crop and processing cards: colour by kind */
+.flock-card.group-livestock { border-left-color: #8A5A2B; }
+.flock-card.group-fish { border-left-color: var(--accent); }
+.flock-card.crop-card { border-left-color: var(--ok); }
+.flock-card.proc-card { border-left-color: var(--nav); }
+
+/* Health records */
+.record-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.record-card header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.record-card p { margin: 0; }
+.record-actions { margin-left: auto; display: inline-flex; gap: 2px; }
+
+/* Processing */
+.stage-line { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.stage-line li { font-size: 12.5px; font-weight: 600; color: var(--muted); background: var(--surface-3); border-radius: 6px; }
+.stage-line li > button, .stage-line li:not(:has(button)) { padding: 5px 10px; display: inline-block; }
+.stage-line li > button { background: none; border: 0; color: inherit; font: inherit; }
+.stage-line li.is-done { background: var(--ok-soft); color: var(--ok); }
+.stage-line li.is-on { background: var(--brand); color: var(--brand-ink); }
+.proc-cols { align-items: start; gap: 18px; }
+.proc-cols section { display: flex; flex-direction: column; gap: 8px; }
+.total-row td { font-weight: 800; border-top: 2px solid var(--line-strong); }
+
+/* Advisory */
+.rec-card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line-strong); border-radius: var(--r-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.rec-card.prio-1 { border-left-color: var(--bad); }
+.rec-card.prio-2 { border-left-color: var(--warn); }
+.rec-card.prio-3 { border-left-color: var(--accent); }
+.rec-card header { display: flex; align-items: center; gap: 8px; }
+.rec-card h3 { font-size: 15.5px; }
+.rec-card p { margin: 0; }
+.rec-cat { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.rec-why { background: var(--surface-2); border-radius: var(--r); padding: 8px 10px; font-size: 13px; }
+.rec-why small { display: block; margin-top: 2px; }
+.reminder-list li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.reminder-list li.is-overdue { border-left: 4px solid var(--bad); }
+.reminder-list li.is-done { opacity: .65; }
+.article-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); color: var(--ink); }
+.article-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-2); }
+.article-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.prose { line-height: 1.6; font-size: 14.5px; }
+.prose p { margin: 0 0 10px; }
+.prose ul { margin: 0 0 10px; padding-left: 20px; }
+.meta-list { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 13px; padding-top: 10px; border-top: 1px solid var(--line); }
+.meta-list dt { color: var(--muted); font-weight: 600; }
+.meta-list dd { margin: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .wizard-card { padding: 18px 16px; }
+  .choice-grid { grid-template-columns: 1fr 1fr; }
+  .proc-cols { grid-template-columns: 1fr; }
+  .farm-stats { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---------------------------------------------------------------- FarmBuddy 1.0 additions */
+.tabs-chips { margin-bottom: 12px; flex-wrap: wrap; }
+.farm-tile.is-on { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+.form-table input, .form-table select { width: 100%; min-width: 70px; }
+.flow-q { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 8px; background: var(--surface); }
+.flow-q legend { font-weight: 700; padding: 0 4px; }
+.flow-q select, .flow-q input, .flow-q textarea { max-width: 420px; }
+.report-body .table td, .report-body .table th { white-space: nowrap; }
+.report-body details summary { cursor: pointer; padding: 6px 0; }
+
+/* Rainfall chart */
+.bar-chart { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; align-items: end; height: 140px; padding: 8px 0 4px; }
+.bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.bar-col .bar { width: 70%; min-height: 2px; background: var(--brand); border-radius: 4px 4px 0 0; }
+.bar-col small { color: var(--muted); font-size: 11px; }
+
+/* Crop calendar */
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-head { font-size: 12px; font-weight: 700; color: var(--muted); text-align: center; padding: 4px 0; }
+.cal-cell { min-height: 84px; border: 1px solid var(--line); border-radius: 8px; padding: 4px; display: flex; flex-direction: column; gap: 2px; background: var(--surface); overflow: hidden; }
+.cal-cell.is-empty { background: transparent; border-style: dashed; opacity: .4; }
+.cal-cell.is-today { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+.cal-day { font-size: 12px; font-weight: 700; }
+.cal-ev { font-size: 11px; line-height: 1.25; padding: 1px 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--surface-3); }
+.cal-ev.tone-ok { background: var(--ok-soft); color: var(--ok); }
+.cal-ev.tone-warn { background: var(--warn-soft); color: var(--warn); }
+.cal-ev.tone-bad { background: var(--bad-soft); color: var(--bad); }
+.cal-ev.tone-info { background: var(--brand-soft); color: var(--brand-text); }
+@media (max-width: 760px) { .cal-cell { min-height: 54px; } .cal-ev { font-size: 0; height: 6px; padding: 0; } }
+
+/* Online / offline and farm switcher in the app bar */
+.net-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); white-space: nowrap; }
+.net-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.net-pill.is-offline { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+.net-pill.is-offline .net-dot { background: var(--warn); }
+.farm-switch { display: inline-flex; align-items: center; gap: 6px; max-width: 200px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: 13px; cursor: pointer; }
+.farm-switch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subtile.is-on { border-color: var(--brand); }
+@media (max-width: 760px) { .net-pill .net-text { display: none; } .net-pill { padding: 4px; } .farm-switch { max-width: 120px; } }
+@media print { .net-pill, .farm-switch, .tabs-chips, [data-range] { display: none !important; } }

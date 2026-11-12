@@ -1,0 +1,67 @@
+import type { TKey } from './en';
+
+/**
+ * Ibibio translations, keyed like en.ts.
+ *
+ * Supplied by the owner (a fluent Ibibio speaker) on 11 Nov 2026, with words
+ * from the Uyo Ibibio Dictionary (Urua, Ekpenyong, Gibbon 2004). A key that is
+ * not here falls back to English. To add or correct a word, copy its key from
+ * en.ts and write the approved Ibibio, then run `npm run translation:check`.
+ */
+export const ib: Partial<Record<TKey, string>> = {
+  "nav.home": "Mfịn",
+  "nav.farm": "Iñwañ mi",
+  "nav.livestock": "Unam ufọk",
+  "group.farm": "Iñwañ",
+  "group.advice": "Item",
+  "group.sell": "Nyam",
+  "group.money": "Akʌk",
+  "group.business": "Ndubeghe",
+  "group.help": "Ñwam",
+  "common.close": "Kʌk",
+  "common.back": "Fiak",
+  "common.finish": "Ma",
+  "common.search": "Yom",
+  "common.add": "Dian",
+  "common.new": "Ufa",
+  "common.status": "Akpo",
+  "common.open": "Kụbọrọ",
+  "common.all": "Afịt",
+  "common.yes": "Ee",
+  "common.no": "Iyọ",
+  "species.goat": "Ebot",
+  "species.sheep": "Edọñ",
+  "species.pig": "Edi",
+  "species.cattle": "Enañ",
+  "group.poultry": "Unen",
+  "group.livestock": "Unam ufọk",
+  "group.fish": "Iyak",
+  "act.other": "Efen",
+  "proc.palm_oil": "Adan",
+  "proc.cassava_fufu": "Usʌñ",
+  "opt.business_type.other": "Efen",
+  "opt.manage.poultry": "Unen",
+  "opt.manage.goats": "Ebot",
+  "opt.manage.sheep": "Edọñ",
+  "opt.manage.pigs": "Edi",
+  "opt.manage.cattle": "Enañ",
+  "opt.manage.fish": "Iyak",
+  "opt.manage.cassava": "Iwa",
+  "opt.poultry_hatchery_vaccinated.yes": "Ee",
+  "opt.poultry_hatchery_vaccinated.no": "Iyọ",
+  "opt.crop_main.Cassava": "Iwa",
+  "opt.crop_main.Yam": "Bia",
+  "opt.crop_main.Maize": "Abakpa",
+  "opt.crop_main.Rice": "Edeesi",
+  "opt.crop_main.Plantain": "Ukọm",
+  "opt.crop_main.Vegetables": "Ikọñ",
+  "opt.crop_main.Other": "Efen",
+  "opt.processing_types.palm_oil": "Adan",
+  "opt.processing_types.cassava_fufu": "Usʌñ",
+  "opt.processing_types.other": "Efen",
+  "page.home.title": "Mfịn",
+  "tile.my_farm": "Iñwañ mi",
+  "tile.livestock": "Unam ufọk",
+  "tile.feed": "Udia unam",
+  "nav.feed": "Udia unam",
+};

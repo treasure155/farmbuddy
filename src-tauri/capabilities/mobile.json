@@ -1,0 +1,7 @@
+{
+  "identifier": "mobile-scanner",
+  "description": "Camera barcode scanning (Android, iOS)",
+  "platforms": ["android", "iOS"],
+  "windows": ["main"],
+  "permissions": ["barcode-scanner:default"]
+}

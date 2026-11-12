@@ -1,0 +1,134 @@
+/* ---------------------------------------------------------------- v2 additions */
+
+/* Trial / update strip above the page */
+.app-banner { background: var(--nav); color: var(--nav-ink); font-size: 13px; }
+.banner-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 7px 28px; }
+.banner-row + .banner-row { border-top: 1px solid rgba(255, 255, 255, .14); }
+.banner-row b { color: #fff; }
+.banner-row .btn-sm { flex: none; }
+
+.count-badge { display: inline-grid; place-items: center; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--brand); color: var(--brand-ink); font-size: 11px; font-weight: 800; }
+.push-right { margin-left: auto; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.toolbar.tight { gap: 8px; }
+.pre-wrap { white-space: pre-wrap; }
+.field-note { align-self: end; margin: 0 0 6px; }
+.inline-field { flex-direction: row; align-items: center; gap: 8px; }
+.inline-field > span:first-child { white-space: nowrap; }
+.mono-input { font-family: var(--mono); font-size: 14px; letter-spacing: .03em; text-transform: uppercase; }
+.figure-sm { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.figures-2 { grid-template-columns: repeat(2, 1fr); }
+.figures-3 { grid-template-columns: repeat(3, 1fr); }
+.figures small { font-size: 11.5px; }
+.ledger-5 { grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr; }
+.report-grid.two { grid-template-columns: minmax(260px, 1fr) 2fr; align-items: start; }
+.diff-line { min-height: 20px; font-weight: 700; }
+.diff-line .ic { vertical-align: -3px; }
+
+/* POS: packs, wholesale and held sales */
+.tile-pack { align-self: flex-start; margin-top: 2px; padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--accent-text); background: var(--accent-soft); white-space: nowrap; }
+.tile-pack:hover { background: var(--accent); color: #fff; }
+.tline-unit.is-toggle { border: 1px dashed #B9B9B9; background: none; border-radius: 4px; padding: 1px 6px; font: inherit; color: #4A4A4A; cursor: pointer; }
+.tline-unit.is-toggle:hover { border-color: var(--brand); color: var(--brand-text); }
+.tline-name .pill { font-family: var(--font); font-size: 10px; vertical-align: 1px; }
+.ticket-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.ticket-row .ticket-hint { text-align: right; }
+.held-row { display: flex; align-items: center; }
+.held-row > button:first-child { flex: 1; }
+.held-row .icon-btn { margin-right: 8px; }
+
+/* Install ID / licence */
+.install-id { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: var(--r); background: var(--surface-2); border: 1px dashed var(--line-strong); }
+.install-id-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.install-id code { font: 700 20px var(--mono); letter-spacing: .08em; color: var(--ink); user-select: all; }
+
+/* Item form extras */
+.subtle-details { border: 1px solid var(--line); border-radius: var(--r); padding: 0 14px; background: var(--surface-2); }
+.subtle-details[open] { padding-bottom: 14px; }
+.subtle-details > summary { cursor: pointer; padding: 11px 0; font-weight: 600; color: var(--ink-2); }
+.subtle-details > .grid-3 + .grid-3 { margin-top: 10px; }
+.affix-select { border: 0 !important; border-left: 1px solid var(--line) !important; border-radius: 0 !important; background: var(--surface-2) !important; width: auto !important; min-height: 0 !important; padding: 0 28px 0 10px !important; font-weight: 600; box-shadow: none !important; }
+.rline { display: grid; grid-template-columns: 1fr 170px auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+
+/* Purchases */
+.pline { display: grid; grid-template-columns: minmax(180px, 2.2fr) minmax(150px, 1.4fr) minmax(120px, 1fr) 110px 34px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.pline-head { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-top: 0; }
+.pline .num { text-align: right; }
+.pline-qty { display: flex; gap: 6px; align-items: center; }
+.pline-qty input { width: 80px; }
+.pline-qty select { width: auto; min-width: 0; flex: 1; }
+.pline-batch { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 6px 10px 2px; background: var(--surface-2); border-radius: var(--r); }
+.purchase-foot { align-items: end; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 16px; }
+.kv dt { font-size: 12px; color: var(--muted); font-weight: 600; }
+.kv dd { margin: 2px 0 0; font-weight: 600; }
+.table.compact th, .table.compact td { padding: 8px 10px; }
+.table tfoot th { text-align: left; border-top: 2px solid var(--line-strong); }
+
+/* Flocks */
+.flock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.flock-card { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: var(--r-lg); box-shadow: var(--shadow-1); color: var(--ink); }
+.flock-card:hover { border-color: var(--line-strong); border-left-color: var(--brand); box-shadow: var(--shadow-2); }
+.flock-card.is-closed { border-left-color: var(--line-strong); opacity: .85; }
+.flock-top { display: flex; justify-content: space-between; align-items: center; font-size: 17px; }
+.flock-figs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.flock-figs span { display: flex; flex-direction: column; }
+.flock-figs small { font-size: 11px; color: var(--muted); font-weight: 600; }
+.flock-figs b { font-size: 15px; }
+
+/* Customer statements (screen + print) */
+.statement-wrap { max-height: 60vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--r); padding: 20px; background: var(--paper); color: var(--paper-ink); }
+.statement { font-size: 13px; }
+.statement-head { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--brand); margin-bottom: 12px; }
+.statement-head h2 { font-size: 18px; }
+.statement-head p { font-size: 12px; color: #555; margin-top: 2px; }
+.statement-title { text-align: right; display: flex; flex-direction: column; }
+.statement-title b { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; }
+.statement-to { margin: 0 0 12px; line-height: 1.5; }
+.statement .table { background: transparent; color: inherit; }
+
+/* Labels */
+.label-pick { max-height: 46vh; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r); }
+.label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.label-row:last-child { border-bottom: 0; }
+.label-row:hover { background: var(--surface-2); }
+.slip-returned { color: #8A4B00; font-style: italic; }
+
+@media (max-width: 1100px) {
+  .ledger-5 { grid-template-columns: 1fr 1fr; }
+  .report-grid.two { grid-template-columns: 1fr; }
+  .pline { grid-template-columns: 1fr 1fr; }
+  .pline-head { display: none; }
+}
+
+@media print {
+  .label-sheet { display: grid; grid-template-columns: repeat(3, 63.5mm); grid-auto-rows: 33.9mm; column-gap: 2.5mm; }
+  .label-sheet.is-roll { display: block; }
+  .plabel { box-sizing: border-box; height: 33.9mm; padding: 1.5mm 2.5mm; display: flex; flex-direction: column; align-items: center; justify-content: space-between; overflow: hidden; font: 8pt/1.15 'Plus Jakarta Sans', Arial, sans-serif; color: #000; break-inside: avoid; }
+  .plabel-roll { width: 50mm; height: 30mm; break-after: page; padding: 1mm 2mm; }
+  .plabel-biz { font-size: 6.5pt; text-transform: uppercase; letter-spacing: .05em; }
+  .plabel-name { font-size: 8.5pt; text-align: center; max-height: 2.3em; overflow: hidden; }
+  .plabel-price { font-size: 12pt; font-weight: 800; }
+  .plabel-price small { font-size: 7pt; font-weight: 400; }
+  .statement { font: 10pt/1.4 'Plus Jakarta Sans', Arial, sans-serif; color: #000; }
+  .statement .table th, .statement .table td { border-bottom: 1px solid #bbb; padding: 1.5mm 2mm; }
+}
+
+/* Tiles that also sell by the pack grow to fit the pack button. */
+.tiles { grid-auto-rows: minmax(104px, auto); }
+.tile > * { flex-shrink: 0; }
+.install-id code { font-size: 17px; white-space: nowrap; }
+.ledger-5 .figure { font-size: 21px; }
+.ledger-5 .ledger-lead .figure { font-size: 24px; }
+.pline { grid-template-columns: minmax(170px, 2fr) minmax(200px, 1.6fr) minmax(120px, 1fr) 110px 34px; }
+.pline-qty input { width: 70px; flex: none; }
+.pline-qty select { min-width: 110px; }
+.pline .pline-qty > input { width: 72px !important; flex: none; }
+.pline .pline-qty > select { flex: 1; min-width: 0 !important; width: auto !important; }
+.pline > * { min-width: 0; }
+
+/* Where to buy a licence key */
+.vendor-box { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: var(--r); background: var(--brand-soft); border: 1px solid var(--brand-line); }
+.vendor-head { display: flex; flex-direction: column; gap: 2px; }
+.vendor-head span { font-weight: 700; color: var(--brand-text); font-size: 13.5px; }
+.vendor-actions { display: flex; flex-wrap: wrap; gap: 8px; }

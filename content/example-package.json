@@ -1,0 +1,25 @@
+{
+  "package_id": "farmbuddy-example",
+  "version": 1,
+  "title": "Example content update (replace with reviewed content)",
+  "published_date": "2026-11-11",
+  "sources": [{ "name": "FarmBuddy content team", "publisher": "TechAlpha Hub", "url": "" }],
+  "articles": [
+    {
+      "slug": "visitor-book",
+      "language": "en",
+      "title": "Keep a visitor book at the farm gate",
+      "category": "Biosecurity",
+      "applies_to": "poultry,livestock",
+      "summary": "Write down who came, when, and where they had been before.",
+      "body": "A visitor book helps you trace where a problem may have come from.\n\n- Ask every visitor to write their name, phone number and the date.\n- Ask whether they visited another farm that day.\n- Keep footwear cleaning at the entrance.",
+      "source": "FarmBuddy content team",
+      "safety_level": "record_keeping",
+      "review_status": "pending_review",
+      "version": 1
+    }
+  ],
+  "protocols": [],
+  "feed_guides": [],
+  "outlooks": []
+}

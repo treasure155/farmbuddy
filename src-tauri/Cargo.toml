@@ -1,0 +1,48 @@
+[package]
+name = "farmbuddy"
+version = "1.0.5"
+description = "FarmBuddy - offline agricultural management and advisory system"
+authors = ["TechAlpha Global Concept"]
+edition = "2021"
+
+[lib]
+name = "farmbuddy_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
+argon2 = "0.5"
+password-hash = { version = "0.5", features = ["getrandom"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.22"
+sha2 = "0.10"
+ed25519-dalek = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "rustls-tls"] }
+# Small HTTPS client for the daily usage notice (see src/telemetry.rs). Bundled root certificates, so it also works on old Android phones.
+ureq = { version = "2.12", default-features = false, features = ["tls"] }
+
+# Windows and macOS only: self-update, restart after update, hardware machine ID.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+machine-uid = "0.5"
+
+# Android (and iOS): camera barcode scanning.
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+tauri-plugin-barcode-scanner = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

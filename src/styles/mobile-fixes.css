@@ -1,0 +1,82 @@
+/* ---------------------------------------------------------------- phone fixes (loaded after mobile.css)
+   - Screens that are taller than the phone (first-run setup, sign-in, recovery key) now scroll inside
+     themselves. The page itself never scrolls (body is overflow:hidden), so before this the Continue
+     button of the setup screen was cut off and unreachable.
+   - Everything stays clear of the status bar and the navigation bar. */
+:root { --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px); }
+
+/* Receive payment dialog: the unpaid receipts it will clear */
+.pay-receipts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.pay-receipts li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; background: var(--surface-2); border-radius: var(--r); }
+
+/* Install ID row: the code and its Copy / WhatsApp buttons wrap instead of squeezing */
+.install-id-row { flex-wrap: wrap; }
+.install-id-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (max-width: 760px) {
+  #app { height: 100vh; height: 100dvh; padding: var(--safe-t) 0 var(--safe-b); }
+  .shell { display: block; height: 100%; }
+  .workspace { height: 100%; }
+  .sidebar { padding-top: var(--safe-t); padding-bottom: var(--safe-b); }
+  .modal-wrap, .modal-wrap.is-drawer { padding: var(--safe-t) 0 var(--safe-b); place-items: stretch; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .modal, .modal-sm, .modal-md, .modal-lg, .modal-wrap.is-drawer .modal { max-height: 100%; }
+
+  .auth { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); height: 100%; min-height: 0; }
+  .auth-side { display: none; }
+  .auth-main { display: flex; flex-direction: column; padding: 20px 16px 24px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .auth-main > * { margin: auto; }
+  /* Back / Continue stay on screen while the long setup form scrolls */
+  .auth-setup .auth-main { padding-bottom: 0; }
+  .auth-setup .form-actions { position: sticky; bottom: 0; z-index: 3; margin: 0 -16px; padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--line); }
+
+  .key-screen { display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 16px; overflow-y: auto; overscroll-behavior: contain; }
+  .key-screen > * { margin: auto; }
+  .key-card { padding: 22px 18px; }
+  .key-value { font-size: 20px; }
+
+  #toasts { left: 12px; right: 12px; bottom: calc(14px + var(--safe-b)); align-items: stretch; }
+  .toast { max-width: none; }
+
+  /* Till: payment rows (method, amount, reference, remove) stack instead of squeezing */
+  .pay-line { grid-template-columns: 1fr 32px; }
+  .pay-line > :nth-child(2), .pay-line > :nth-child(3) { grid-column: 1 / -1; }
+  .pay-line > :nth-child(4) { grid-column: 2; grid-row: 1; }
+  .pay-line > :nth-child(3):empty { display: none; }
+
+  /* Till: the page scrolls. It was clipped (overflow:hidden) before, so nothing below the first
+     screenful of products could be reached and the till felt frozen after opening a shift. */
+  .view { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .view-pos { overflow-y: auto; padding-bottom: 12px; }
+  .view-pos > .pos { flex: none; min-height: auto; }
+
+  /* Pop-ups: the body scrolls and the Save / Cancel row stays in view at the bottom */
+  .modal { display: flex; flex-direction: column; }
+  .modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .modal-body .form-actions { position: sticky; bottom: -16px; z-index: 4; margin: 10px -16px -16px; padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--line); }
+  .modal-wrap.is-drawer .modal-body .form-actions { background: var(--surface-2); }
+
+  /* Receipt pop-up: Print / WhatsApp / Email first, the paper below */
+  .receipt-view { display: flex; flex-direction: column; gap: 14px; }
+  .receipt-view .receipt-side { order: -1; position: static; }
+
+  /* Rows of buttons, tabs and categories wrap, so every one is visible without sideways scrolling */
+  .topbar-actions { flex-wrap: wrap; overflow: visible; }
+  .topbar-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .settings-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; overflow: visible; }
+  .settings-nav button { white-space: normal; border: 1px solid var(--line); background: var(--surface); padding: 10px; }
+  .chips { flex-wrap: wrap; overflow: visible; }
+  .tabs, .panel-head { flex-wrap: wrap; }
+
+  /* Tables become stacked cards: every column and every button is on screen (cell headings are added by lib/enhance.ts) */
+  .table-scroll { overflow-x: visible; }
+  .table, .table tbody, .table tfoot, .table tr, .table td, .table th { display: block; width: auto; }
+  .table thead { display: none; }
+  .table tr { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .table tbody tr:last-child { border-bottom: 0; }
+  .table td, .table th { padding: 2px 0; border: 0; text-align: left; white-space: normal; position: static; background: none; }
+  .table td:first-child, .table th:first-child { padding: 0 0 4px; font-size: 15px; }
+  .table .num { text-align: left; white-space: normal; }
+  .table td[data-label]:not([data-label=""]):not(:first-child)::before { content: attr(data-label) ": "; color: var(--muted); font-weight: 600; font-size: 12.5px; }
+  .table .actions-col { width: auto; text-align: left; padding-top: 6px; }
+  .table tfoot tr { background: var(--surface-2); font-weight: 700; }
+}

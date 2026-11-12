@@ -1,0 +1,81 @@
+/* ---------------------------------------------------------------- phones and small tablets (Android app) */
+.menu-btn, .nav-scrim { display: none; }
+.cam-btn { flex: none; }
+
+@media (max-width: 760px) {
+  html, body { height: auto; }
+  .shell { display: block; height: 100vh; }
+  .sidebar {
+    position: fixed; z-index: 45; top: 0; bottom: 0; left: 0; width: 270px; max-width: 84vw;
+    transform: translateX(-102%); transition: transform .2s ease-out; box-shadow: var(--shadow-2);
+  }
+  .shell.nav-open .sidebar { transform: none; }
+  .shell.nav-open .nav-scrim { display: block; position: fixed; inset: 0; z-index: 44; background: rgba(10, 18, 30, .45); }
+  .nav-item kbd, .ticket-hint, kbd { display: none; }
+  .workspace { height: 100vh; }
+  .menu-btn { display: inline-grid; place-items: center; flex: none; margin-left: -6px; }
+
+  .topbar { flex-wrap: wrap; gap: 8px 10px; padding: 10px 12px 8px; justify-content: flex-start; }
+  .topbar-title { flex: 1; }
+  .topbar h1 { font-size: 19px; }
+  .topbar p { font-size: 12px; }
+  .topbar-actions { width: 100%; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .topbar-actions .btn { flex: none; }
+  .banner-row { padding: 6px 12px; flex-wrap: wrap; gap: 6px 12px; font-size: 12.5px; }
+  .view { padding: 4px 12px 28px; gap: 14px; }
+
+  /* Forms and grids stack */
+  .grid-2, .grid-3, .pline-batch, .rline { grid-template-columns: 1fr; }
+  .span-2 { grid-column: auto; }
+  .ledger, .ledger-5, .figures, .figures-3 { grid-template-columns: 1fr 1fr; }
+  .figures-2 { grid-template-columns: 1fr 1fr; }
+  .report-grid, .report-grid.two, .dash-grid, .staff-layout, .type-grid { grid-template-columns: 1fr; }
+  .ledger-cell, .figures > div { border-left: 0 !important; border-top: 1px solid var(--line); }
+  .ledger-cell:nth-child(-n+2), .figures > div:nth-child(-n+2) { border-top: 0; }
+  .figure, .ledger-5 .figure { font-size: 19px; }
+  .ledger-lead .figure, .ledger-5 .ledger-lead .figure { font-size: 22px; }
+  .toolbar { gap: 8px; }
+  .toolbar .search-field.grow { flex-basis: 100%; }
+  .toolbar select { min-width: 0; flex: 1; }
+  .seg-wide { grid-auto-flow: row; grid-auto-columns: auto; }
+  .form-actions { justify-content: stretch; }
+  .form-actions .btn { flex: 1; }
+  .form-actions .push-left { margin-right: 0; }
+
+  /* Settings: section list scrolls sideways */
+  .settings { grid-template-columns: 1fr; gap: 12px; }
+  .settings-nav { position: static; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .settings-nav button { flex: none; white-space: nowrap; }
+
+  /* Till: items first, then the ticket with the pay button pinned to the bottom */
+  .pos { display: flex; flex-direction: column; gap: 14px; }
+  .pos-catalog, .tiles { min-height: auto; overflow: visible; flex: none; }
+  .tiles { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .pos-search input { font-size: 16px; }
+  .pos-ticket, .ticket { flex: none; min-height: auto; }
+  .ticket-lines { flex: none; overflow: visible; }
+  .ticket-empty { min-height: 110px; }
+  .ticket-actions { position: sticky; bottom: 0; z-index: 5; padding: 8px 0 4px; background: var(--bg); }
+  .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .chip { flex: none; }
+
+  /* Pop-ups fill the screen */
+  .modal-wrap { padding: 0; place-items: stretch; }
+  .modal, .modal-sm, .modal-md, .modal-lg, .modal-wrap.is-drawer .modal { max-width: none; width: 100%; height: 100%; max-height: 100vh; border-radius: 0; }
+  .modal-body { padding: 16px; }
+  .drawer-actions { margin: 0 -16px -16px; padding: 12px 16px; bottom: -16px; }
+  .receipt-view, .checkout { grid-template-columns: 1fr; }
+  .pline { grid-template-columns: 1fr 1fr; }
+  .pline > select[data-k="product"] { grid-column: 1 / -1; }
+  .statement-head { flex-direction: column; }
+  .statement-title { text-align: left; }
+  .flock-grid { grid-template-columns: 1fr; }
+  .flock-figs { grid-template-columns: 1fr 1fr; }
+
+  /* Sign-in */
+  .auth { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+  .auth-side { display: none; }
+  .auth-main { padding: 24px 16px; }
+  .install-id code { font-size: 15px; }
+  .vendor-actions .btn { flex: 1; }
+}
