@@ -6,6 +6,13 @@ FarmBuddy is an offline agricultural management and advisory system by **TechAlp
 
 It follows the eStock Manager v3.4.0 architecture (as the specification requires): **Tauri 2 + Rust + SQLite** for the backend and **TypeScript + Vite** for the interface. It has its own database file (`farmbuddy.sqlite3`), app ID (`online.techalphahub.farmbuddy`), first-run farm setup and visual design; there are no shop, eatery or laundry business types. All database work, validation, permissions, stock changes and money calculations happen in Rust; money is stored as whole kobo.
 
+## Status: version 1.0.8
+
+### What changed in 1.0.8
+- **Feed is counted in kg every day.** "How many kg of feed did the birds get today?" takes exactly that weight out of the store (e.g. 27 kg from 30 bags of 25 kg leaves 723 kg = 28 bags + 23 kg). The feed store, the batch and the daily table show kg (and bags + kg).
+- **Starter / finisher split:** the farm's practical split is filled in (30% starter for weeks 1–4, 70% finisher for weeks 5–8) and the farmer can change both. 600 birds × 17 bags ÷ 100 = 102 bags = 31 starter (775 kg) + 71 finisher (1,775 kg). FarmBuddy works out the **planned kg for one day** of the current stage (starter: 775 kg ÷ 28 days ≈ 27.7 kg), shows it on the daily form and the dashboard ("Feed today: given / planned"), and warns when a day's feed is well above the plan. The daily form picks the feed of the current stage.
+- **Birds add up on screen:** every birds count shows its sum, e.g. *started 600 − 1 died − 50 sold = 549 alive*; batch cards show alive and sold.
+
 ## Status: version 1.0.7
 
 ### What changed in 1.0.7

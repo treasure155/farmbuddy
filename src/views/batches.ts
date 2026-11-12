@@ -19,6 +19,7 @@ interface Batch {
   planned_birds: number; chicks_ordered: number; chicks_delivered: number; dead_on_arrival: number; initial_live: number; added: number; deaths: number; removed: number;
   sold_birds: number; reserved_birds: number; alive: number; sick_now: number; deaths_today: number; mortality_pct: number; last_record: string; recorded_today: boolean;
   bags_per_100: number; bag_kg: number; planned_bags: number; planned_kg: number; buy_bags_plan: number; plan_starter: number; plan_grower: number; plan_finisher: number;
+  starter_pct: number; starter_weeks: number; starter_kg: number; finisher_kg: number; stage: string; plan_kg_today: number; given_kg_today: number; given_kg: number;
   issued_bags: number; eaten_kg: number; wasted_kg: number; plan_left_bags: number; feed_cost_kobo: number; feed_per_bird_kg: number;
   latest_avg_kg: number | null; prev_avg_kg: number | null; gain_kg: number | null; adg_g: number | null; fcr: number | null; est_market_kg: number | null; last_weighed: string;
   withdrawal_until: string; eligible: boolean; plan: Plan[];
@@ -28,7 +29,7 @@ interface Batch {
 }
 interface Feed {
   id: number; name: string; brand: string; bag_kg: number; min_bags: number; full_bags: number; available: number; purchased: number; issued: number; damaged: number;
-  avg_price_kobo: number; value_kobo: number; owed_kobo: number; last_supplier: string; last_price_kobo: number; daily_bags: number; days_left: number | null; finish_date: string; buy_bags: number;
+  avg_price_kobo: number; value_kobo: number; owed_kobo: number; last_supplier: string; last_price_kobo: number; daily_bags: number; daily_kg: number; available_kg: number; days_left: number | null; finish_date: string; buy_bags: number;
   level: 'normal' | 'reducing' | 'restock' | 'urgent' | 'finished'; message: string;
 }
 interface Limits { warn_pct: number; low_pct: number; critical_days: number; mortality_pct: number; weigh_days: number }
@@ -40,6 +41,13 @@ const naira = (k: number) => money(k, { whole: true });
 const n = (v: unknown) => Number(v ?? 0) || 0;
 const s = (v: unknown) => String(v ?? '');
 const plural = (k: number, w: string) => `${qty(k)} ${w}${k === 1 ? '' : 's'}`;
+/** 723 kg with 25 kg bags → "28 bags + 23 kg". */
+const inBags = (kg: number, bagKg: number) => {
+  if (!(bagKg > 0)) return `${qty(kg)} kg`;
+  const whole = Math.floor((kg + 1e-9) / bagKg); const rest = Math.round((kg - whole * bagKg) * 10) / 10;
+  return [whole ? plural(whole, 'bag') : '', rest > 0 ? `${qty(rest)} kg` : ''].filter(Boolean).join(' + ') || '0 bags';
+};
+const birdsSum = (b: Batch) => `started ${qty(b.initial_live + b.added)} − ${qty(b.deaths)} died − ${qty(b.sold_birds)} sold${b.removed ? ` − ${qty(b.removed)} removed` : ''}`;
 const PILL: Record<string, string> = { normal: 'pill-ok', reducing: 'pill-warn', restock: 'pill-warn', urgent: 'pill-bad', finished: 'pill-bad' };
 const LEVEL: Record<string, string> = { normal: 'Normal stock', reducing: 'Reducing', restock: 'Restock now', urgent: 'Urgent', finished: 'Finished' };
 let cats: string[] = [];
@@ -146,9 +154,10 @@ function choose(ctx: ViewCtx, list: Batch[], form: string) {
 function feedCard(f: Feed, showMoney: boolean) {
   return `<div class="feed-card lvl-${f.level}">
     <div class="feed-top"><b>${esc(f.name)}</b><span class="pill ${PILL[f.level]}">${LEVEL[f.level]}</span></div>
-    <div class="feed-big">${qty(f.available)} <small>bags left</small></div>
-    <div class="feed-meta">${f.days_left !== null ? `<span>About <b>${qty(f.days_left)} days</b> of feed · finishes ${esc(dateLabel(f.finish_date))}</span>` : '<span>Days left show after a few daily records</span>'}
-      ${f.daily_bags ? `<span>Using about ${qty(Math.round(f.daily_bags * 10) / 10)} bags a day</span>` : ''}
+    <div class="feed-big">${qty(f.available_kg)} <small>kg left</small></div>
+    <div class="feed-meta"><span><b>${esc(inBags(f.available_kg, f.bag_kg))}</b> (bags of ${qty(f.bag_kg)} kg)</span>
+      ${f.days_left !== null ? `<span>About <b>${qty(f.days_left)} days</b> of feed · finishes ${esc(dateLabel(f.finish_date))}</span>` : '<span>Days left show after a few daily records</span>'}
+      ${f.daily_kg ? `<span>Using about ${qty(f.daily_kg)} kg a day</span>` : ''}
       ${f.buy_bags ? `<span>Buy <b>${qty(f.buy_bags)} bags</b> to fill the store</span>` : ''}
       ${showMoney && f.last_price_kobo ? `<span>Last price ${naira(f.last_price_kobo)} a bag${f.last_supplier ? ` from ${esc(f.last_supplier)}` : ''}</span>` : ''}
       ${showMoney && f.owed_kobo ? `<span class="bad-text">You owe ${naira(f.owed_kobo)} for this feed</span>` : ''}</div>
@@ -176,9 +185,10 @@ function homePage(ctx: ViewCtx, home: Home) {
       const low = home.feeds.filter((f) => f.level !== 'normal').length;
       const tile = (l: string, v: string, sub = '', tone = '') => `<div class="kpi ${tone}"><small>${l}</small><b>${v}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
       return `<section class="stack"><h2 class="section-title">Dashboard</h2><div class="kpi-grid">
-        ${tile('Birds alive', qty(sum((b) => b.alive)), `${open.length} batch${open.length === 1 ? '' : 'es'} running`)}
+        ${tile('Birds alive', qty(sum((b) => b.alive)), open.length === 1 ? birdsSum(open[0]) : `${open.length} batches running`)}
         ${tile('Died', qty(sum((b) => b.deaths)), `${qty(sum((b) => b.deaths_today))} today`)}
-        ${tile('Feed bags in store', qty(home.feeds.reduce((t, f) => t + Math.max(0, f.available), 0)), low ? `${low} feed${low === 1 ? '' : 's'} to buy` : 'enough for now', low ? 'kpi-warn' : '')}
+        ${tile('Feed in store', `${qty(Math.round(home.feeds.reduce((t, f) => t + Math.max(0, f.available_kg), 0)))} kg`, low ? `${low} feed${low === 1 ? '' : 's'} to buy` : 'enough for now', low ? 'kpi-warn' : '')}
+        ${open.length === 1 && open[0].plan_kg_today ? tile(`Feed today (${open[0].stage})`, `${qty(open[0].given_kg_today)} of ${qty(open[0].plan_kg_today)} kg`, 'given / planned', open[0].given_kg_today > open[0].plan_kg_today * 1.15 ? 'kpi-warn' : '') : ''}
         ${tile('Vaccination', due ? `${due} due` : 'Nothing due', '', due ? 'kpi-warn' : '')}
         ${tile('Sold', qty(sum((b) => b.sold_birds)), `${qty(sum((b) => b.reserved_birds))} reserved`)}
         ${manager ? `${tile('Spent', naira(sum((b) => b.total_cost_kobo)))}${tile('Sales', naira(sum((b) => b.revenue_kobo)), `owed to you ${naira(sum((b) => b.customers_owe_kobo))}`)}
@@ -211,8 +221,9 @@ function batchCard(b: Batch, showMoney: boolean) {
       <span class="run-pills">${bad ? `<span class="pill pill-bad">${bad} alert${bad === 1 ? '' : 's'}</span>` : ''}<span class="pill ${b.status === 'open' ? 'pill-ok' : 'pill-mute'}">${b.status === 'open' ? 'Running' : 'Closed'}</span></span></span>
     <span class="run-tiles">
       <span><small>Alive</small><b>${qty(b.alive)}</b></span>
+      <span><small>Sold</small><b>${qty(b.sold_birds)}</b></span>
       <span><small>Died</small><b>${qty(b.deaths)} (${b.mortality_pct}%)</b></span>
-      <span><small>Feed used</small><b>${qty(b.issued_bags)} of ${qty(b.planned_bags)} bags</b></span>
+      <span><small>Feed used</small><b>${qty(Math.round(b.given_kg))} of ${qty(b.planned_kg)} kg</b></span>
       ${next && b.status === 'open' ? `<span><small>${next.state === 'later' ? 'Next' : next.state === 'due' ? 'Due now' : 'Overdue'}</small><b>${esc(next.name.split(',')[0])}</b></span>` : ''}
       ${showMoney && !b.money_hidden ? `<span class="run-pl ${b.projected_profit_kobo < 0 ? 'is-loss' : 'is-profit'}"><small>${b.status === 'closed' ? (b.profit_kobo < 0 ? 'Loss' : 'Profit') : 'Expected profit'}</small><b>${naira(Math.abs(b.status === 'closed' ? b.profit_kobo : b.projected_profit_kobo))}</b></span>` : ''}
     </span></button>`;
@@ -227,7 +238,7 @@ async function batchPage(ctx: ViewCtx, id: number) {
   const open = b.status === 'open';
   ctx.header(b.name, `${b.bird_type}${b.breed ? ` (${b.breed})` : ''} · arrived ${dateLabel(b.arrival_date)} · day ${b.age_days}${open ? '' : ' · closed'}`,
     `<button class="btn btn-ghost" data-all>${icon('back', 16)} All batches</button><button class="btn btn-ghost" data-print>${icon('print', 16)} Report</button>${manager ? `<button class="btn btn-ghost" data-edit>${icon('edit', 16)} Change answers</button>` : ''}`);
-  const feedLeft = d.feeds.reduce((t, f) => t + Math.max(0, f.available), 0);
+  const feedLeft = d.feeds.reduce((t, f) => t + Math.max(0, f.available_kg), 0);
   const soonest = d.feeds.filter((f) => f.days_left !== null).sort((a, b2) => (a.days_left ?? 0) - (b2.days_left ?? 0))[0];
   const toBuy = d.feeds.filter((f) => f.level !== 'normal');
   const due = b.plan.filter((p) => p.state === 'due' || p.state === 'overdue');
@@ -236,9 +247,10 @@ async function batchPage(ctx: ViewCtx, id: number) {
   ctx.main.innerHTML = `
     ${b.is_demo ? `<div class="callout callout-warn">${icon('info', 18)}<span>Demo batch.</span></div>` : ''}
     <section class="kpi-grid">
-      ${tile('Birds alive', qty(b.alive), `${b.sick_now ? `${b.sick_now} sick · ` : ''}${b.reserved_birds ? `${b.reserved_birds} reserved · ` : ''}${b.sold_birds} sold`)}
+      ${tile('Birds alive', qty(b.alive), `${birdsSum(b)}${b.sick_now ? ` · ${b.sick_now} sick` : ''}${b.reserved_birds ? ` · ${b.reserved_birds} reserved` : ''}`)}
       ${tile('Died so far', `${qty(b.deaths)}`, `${b.mortality_pct}% · ${b.deaths_today} today`, b.mortality_pct > 5 ? 'kpi-bad' : '')}
-      ${tile('Feed bags left', qty(feedLeft), soonest ? `finishes ${dateLabel(soonest.finish_date)}` : 'in the store', toBuy.length ? 'kpi-warn' : '')}
+      ${tile('Feed in store', `${qty(Math.round(feedLeft))} kg`, soonest ? `finishes ${dateLabel(soonest.finish_date)}` : 'in the store', toBuy.length ? 'kpi-warn' : '')}
+      ${open && b.plan_kg_today ? tile(`Feed today (${esc(b.stage)})`, `${qty(b.given_kg_today)} of ${qty(b.plan_kg_today)} kg`, 'given / planned', b.given_kg_today > b.plan_kg_today * 1.15 ? 'kpi-warn' : '') : ''}
       ${tile('To buy', toBuy.length ? toBuy.map((f) => `${f.buy_bags ? qty(f.buy_bags) + ' bags ' : ''}${esc(f.name)}`).join(', ') : 'Nothing now', '', toBuy.length ? 'kpi-warn' : '')}
       ${tile('Vaccination', due.length ? esc(due[0].name.split(',')[0]) : 'Nothing due', due.length ? (due[0].state === 'overdue' ? 'overdue' : 'due now') : '', due.some((x) => x.state === 'overdue') ? 'kpi-bad' : due.length ? 'kpi-warn' : '')}
       ${showMoney ? `${tile('Spent', naira(b.total_cost_kobo), b.budget_kobo ? `budget ${naira(b.budget_kobo)}` : '')}
@@ -265,9 +277,11 @@ async function batchPage(ctx: ViewCtx, id: number) {
       <section class="panel"><header class="panel-head"><h2>Feed: plan and actual</h2></header>
         ${row(`Plan: ${qty(b.bags_per_100)} bags per 100 birds × ${qty(b.planned_birds)} birds`, `<b>${qty(b.planned_bags)} bags</b>`)}
         ${row(`= ${qty(b.planned_kg)} kg (bags of ${qty(b.bag_kg)} kg)`, `buy ${qty(b.buy_bags_plan)} bags`)}
-        ${b.plan_starter || b.plan_grower || b.plan_finisher ? row('Starter / grower / finisher planned', `${qty(b.plan_starter)} / ${qty(b.plan_grower)} / ${qty(b.plan_finisher)}`) : ''}
-        ${row('<b>Bags given so far</b>', `<b class="${b.issued_bags > b.planned_bags ? 'bad-text' : ''}">${qty(b.issued_bags)}</b>`, 'pl-total')}
-        ${row('Bags left in the plan', qty(b.plan_left_bags))}${row('Feed eaten', `${qty(Math.round(b.eaten_kg))} kg (${qty(b.feed_per_bird_kg)} kg a bird)`)}
+        ${row(`Starter ${qty(b.starter_pct)}% (weeks 1–${b.starter_weeks})`, `${qty(b.plan_starter)} bags · ${qty(b.starter_kg)} kg`)}
+        ${row(`Finisher ${qty(100 - b.starter_pct)}% (weeks ${b.starter_weeks + 1}–${b.weeks})`, `${qty(b.plan_finisher + b.plan_grower)} bags · ${qty(b.finisher_kg)} kg`)}
+        ${b.plan_kg_today ? row(`Plan for one day now (${esc(b.stage)})`, `<b>${qty(b.plan_kg_today)} kg</b> (${esc(inBags(b.plan_kg_today, b.bag_kg))})`) : ''}
+        ${row('<b>Feed given so far</b>', `<b class="${b.issued_bags > b.planned_bags ? 'bad-text' : ''}">${qty(Math.round(b.given_kg * 10) / 10)} kg</b> (${esc(inBags(b.given_kg, b.bag_kg))})`, 'pl-total')}
+        ${row('Left in the plan', `${qty(Math.round((b.planned_kg - b.given_kg) * 10) / 10)} kg`)}${row('Feed eaten', `${qty(Math.round(b.eaten_kg))} kg (${qty(b.feed_per_bird_kg)} kg a bird)`)}
         ${b.wasted_kg ? row('Wasted', `${qty(b.wasted_kg)} kg`) : ''}${showMoney ? row('Cost of feed given', naira(b.feed_cost_kobo)) : ''}
         <p class="muted small">The plan is your budget. Feed really used is counted from the daily records.</p>
       </section>
@@ -296,7 +310,7 @@ async function batchPage(ctx: ViewCtx, id: number) {
         <td class="row-actions">${open && (p.state === 'due' || p.state === 'overdue' || p.state === 'later') ? `<button class="btn btn-ghost btn-sm" data-do="${p.id}">Record</button><button class="btn btn-ghost btn-sm" data-skip="${p.id}">Not needed</button>` : ''}</td></tr>`).join('')}
       </tbody></table></div></section>` : ''}
 
-    ${tableBlock('Daily records', d.daily, ['Day', 'Died', 'Sick', 'Removed', 'Added', 'Feed', 'Bags', 'Wasted kg', 'Notes', 'By'], (r) => [dateLabel(s(r.day)), r.deaths, r.sick, r.removed, r.added, s(r.feed_name), r.bags_issued, r.kg_wasted, [s(r.cause), s(r.observations), s(r.problems)].filter(Boolean).join(' · '), s(r.user_name)], 'daily')}
+    ${tableBlock('Daily records', d.daily, ['Day', 'Died', 'Sick', 'Removed', 'Added', 'Feed', 'Kg given', 'Wasted kg', 'Notes', 'By'], (r) => [dateLabel(s(r.day)), r.deaths, r.sick, r.removed, r.added, s(r.feed_name), r.kg_given, r.kg_wasted, [s(r.cause), s(r.observations), s(r.problems)].filter(Boolean).join(' · '), s(r.user_name)], 'daily')}
     ${tableBlock('Vaccines, medicine and vitamins', d.health, ['Date', 'Type', 'Name', 'Birds', 'Method', 'Given by', 'Withdrawal', 'Next due'], (r) => [dateLabel(s(r.done_date)), s(r.kind), s(r.name), r.birds, s(r.method), s(r.given_by), n(r.withdrawal_days) ? `${r.withdrawal_days} days` : '—', s(r.next_due) ? dateLabel(s(r.next_due)) : '—'], 'health')}
     ${tableBlock('Weighing', d.weights, ['Date', 'Birds weighed', 'Total kg', 'Average kg', 'Notes'], (r) => [dateLabel(s(r.weigh_date)), r.sampled, r.total_kg, r.avg_kg, [s(r.smaller), s(r.notes)].filter(Boolean).join(' · ')], 'weight')}
     ${showMoney ? tableBlock('Money spent', d.expenses, ['Date', 'Category', 'What', 'Amount', 'Paid', 'Approved'], (r) => [dateLabel(s(r.spent_date)), s(r.category), s(r.item), naira(n(r.amount_kobo)), naira(n(r.paid_kobo)), n(r.approved) ? `Yes (${s(r.approved_by)})` : owner ? h(`<button class="btn btn-ghost btn-sm" data-approve="${r.id}">Approve</button>`) : 'Waiting'], 'expense') : ''}
@@ -326,8 +340,8 @@ async function batchPage(ctx: ViewCtx, id: number) {
       await call('pb_close_batch', { id, reopen }); ctx.go('batches', { open: id });
     }
     const csv = el.closest<HTMLElement>('[data-csv]');
-    if (csv) await exportCsv(`${b.name}-daily-records.csv`, ['Day', 'Died', 'Cause', 'Sick', 'Removed', 'Added', 'Feed', 'Bags given', 'Kg eaten', 'Kg wasted', 'Water (l)', 'Observations', 'Problems', 'Tomorrow', 'Recorded by'],
-      d.daily.map((r) => [r.day, r.deaths, r.cause, r.sick, r.removed, r.added, r.feed_name, r.bags_issued, r.kg_eaten, r.kg_wasted, r.water_l, r.observations, r.problems, r.tomorrow, r.user_name]));
+    if (csv) await exportCsv(`${b.name}-daily-records.csv`, ['Day', 'Died', 'Cause', 'Sick', 'Removed', 'Added', 'Feed', 'Kg given', 'Kg eaten', 'Kg wasted', 'Water (l)', 'Observations', 'Problems', 'Tomorrow', 'Recorded by'],
+      d.daily.map((r) => [r.day, r.deaths, r.cause, r.sick, r.removed, r.added, r.feed_name, r.kg_given, r.kg_eaten, r.kg_wasted, r.water_l, r.observations, r.problems, r.tomorrow, r.user_name]));
   };
   $('[data-all]')?.addEventListener('click', () => ctx.go('batches'));
   $('[data-edit]')?.addEventListener('click', () => ctx.go('batches', { form: 'batch', id: String(id) }));
@@ -379,10 +393,9 @@ async function batchForm(ctx: ViewCtx, id: number | null, back: () => void) {
       { title: 'Feed plan', qs: [
         { name: 'bags_per_100', label: 'How many bags of feed for every 100 birds?', type: 'number', value: v('bags_per_100', 17), hint: 'Your farm standard is 17. Change it if your plan is different.' },
         { name: 'bag_kg', label: 'How many kg is one bag?', type: 'number', value: v('bag_kg', 25) },
-        { name: 'plan_starter', label: 'Bags of starter you intend to use', type: 'number', value: v('plan_starter') },
-        { name: 'plan_grower', label: 'Bags of grower (if any)', type: 'number', value: v('plan_grower') },
-        { name: 'plan_finisher', label: 'Bags of finisher', type: 'number', value: v('plan_finisher') },
-        { name: 'feed_change', label: 'At what age do you change feed?', value: v('feed_change'), hint: 'e.g. starter to week 3, finisher from week 4' },
+        { name: 'starter_pct', label: 'What share of the feed is starter (%)?', type: 'number', value: v('starter_pct', 30), hint: 'Practical split: 30% starter, 70% finisher. Change it to your own.' },
+        { name: 'starter_weeks', label: 'How many weeks of starter before finisher?', type: 'number', value: v('starter_weeks', 4), hint: 'e.g. starter weeks 1–4, finisher weeks 5–8' },
+        { name: 'feed_change', label: 'Anything to note about changing feed?', value: v('feed_change') },
       ] },
       { title: 'Selling plan and budget', qs: [
         { name: 'expected_sell', label: 'How many birds do you expect to sell?', type: 'number', value: v('expected_sell') },
@@ -397,12 +410,18 @@ async function batchForm(ctx: ViewCtx, id: number | null, back: () => void) {
     calc: (x) => {
       const birds = num(x.planned_birds), per = num(x.bags_per_100), kg = num(x.bag_kg) || 25;
       const bags = Math.round(birds / 100 * per * 1000) / 1000;
+      const whole = Math.round(bags);
+      const st = Math.round(whole * num(x.starter_pct) / 100); const fin = Math.max(0, whole - st);
+      const sw = int(x.starter_weeks); const fw = Math.max(0, int(x.weeks) - sw);
       const alive = int(x.chicks_delivered) - int(x.dead_on_arrival);
       const chickCost = int(x.chicks_paid_for) * kobo(x.chick_price_kobo);
       const balance = chickCost + kobo(x.chick_transport_kobo) - kobo(x.chick_amount_paid_kobo);
       return `<h2>What FarmBuddy works out</h2><div class="pl-group">
         ${row('Feed needed', `<b>${qty(bags)} bags</b>`)}${row('Total feed', `${qty(Math.round(bags * kg * 10) / 10)} kg`)}${row('Buy (whole bags)', `${qty(Math.ceil(bags))} bags`)}
         ${row('Feed per bird', birds ? `${qty(Math.round(per * kg / 100 * 100) / 100)} kg` : '—')}</div>
+        <div class="pl-group"><p class="pl-title">Starter and finisher</p>
+        ${row(`Starter ${qty(num(x.starter_pct))}%`, `<b>${qty(st)} bags</b> · ${qty(st * kg)} kg`)}${row(`Finisher ${qty(100 - num(x.starter_pct))}%`, `<b>${qty(fin)} bags</b> · ${qty(fin * kg)} kg`)}
+        ${sw > 0 ? row(`Starter a day (weeks 1–${sw})`, `${qty(Math.round(st * kg / (sw * 7) * 10) / 10)} kg`) : ''}${fw > 0 ? row(`Finisher a day (weeks ${sw + 1}–${int(x.weeks)})`, `${qty(Math.round(fin * kg / (fw * 7) * 10) / 10)} kg`) : ''}</div>
         <div class="pl-group">${row('Alive at arrival', alive > 0 ? qty(alive) : '—')}${row('Chicks cost', naira(chickCost))}${row('Average per chick (with transport)', alive > 0 ? naira((chickCost + kobo(x.chick_transport_kobo)) / alive) : '—')}
         ${balance > 0 ? row('<b>Still owed to supplier</b>', `<b class="bad-text">${naira(balance)}</b>`) : ''}</div>
         <p class="muted small">The feed plan is a budget, not a fact: real use depends on breed, feed, weather and deaths. Record what you really use every day.</p>`;
@@ -412,7 +431,7 @@ async function batchForm(ctx: ViewCtx, id: number | null, back: () => void) {
         id, farm_id: id ? (f.farm_id ?? null) : (store.farmId ?? null), name: x.name, bird_type: x.bird_type, breed: x.breed, house: x.house, manager: x.manager,
         planned_birds: int(x.planned_birds), arrival_date: x.arrival_date, age_at_arrival: int(x.age_at_arrival), weeks: int(x.weeks), sell_age_weeks: int(x.sell_age_weeks),
         expected_sell: int(x.expected_sell), expected_weight_kg: num(x.expected_weight_kg), price_per: x.price_per || 'bird', expected_price_kobo: kobo(x.expected_price_kobo), budget_kobo: kobo(x.budget_kobo),
-        bags_per_100: num(x.bags_per_100), bag_kg: num(x.bag_kg) || 25, plan_starter: num(x.plan_starter), plan_grower: num(x.plan_grower), plan_finisher: num(x.plan_finisher), feed_change: x.feed_change,
+        bags_per_100: num(x.bags_per_100), bag_kg: num(x.bag_kg) || 25, plan_starter: 0, plan_grower: 0, plan_finisher: 0, starter_pct: num(x.starter_pct), starter_weeks: int(x.starter_weeks), feed_change: x.feed_change,
         chicks_ordered: int(x.chicks_ordered), chicks_delivered: int(x.chicks_delivered), dead_on_arrival: int(x.dead_on_arrival), chicks_paid_for: int(x.chicks_paid_for),
         chick_price_kobo: kobo(x.chick_price_kobo), chick_transport_kobo: kobo(x.chick_transport_kobo), chick_supplier: x.chick_supplier, chick_amount_paid_kobo: kobo(x.chick_amount_paid_kobo),
         supplier_receipt: x.supplier_receipt === '1', hatchery_vaccines: x.hatchery_vaccines, notes: x.notes, add_timetable: x.add_timetable === '1' } });
@@ -437,8 +456,8 @@ async function dailyForm(ctx: ViewCtx, id: number, home: Home, back: () => void)
         { name: 'added', label: 'How many birds were added?', type: 'number' },
       ] },
       { title: 'Feed and water', qs: [
-        ...(feeds.length ? [{ name: 'feed_id', label: 'Which feed did you give?', type: 'select' as const, options: [['', 'No feed from the store today'], ...feeds.map((f) => [String(f.id), `${f.name} (${qty(f.available)} bags in store)`] as [string, string])] as [string, string][], value: feeds.length === 1 ? String(feeds[0].id) : '' }] : []),
-        { name: 'bags_issued', label: 'How many bags did you take from the store to the birds?', type: 'number', when: (v) => !!v.feed_id },
+        ...(feeds.length ? [{ name: 'feed_id', label: 'Which feed did you give?', type: 'select' as const, options: [['', 'No feed from the store today'], ...feeds.map((f) => [String(f.id), `${f.name} (${qty(f.available_kg)} kg in store)`] as [string, string])] as [string, string][], value: String((feeds.find((f) => f.name.toLowerCase().includes(b.stage.toLowerCase())) ?? (feeds.length === 1 ? feeds[0] : null))?.id ?? '') }] : []),
+        { name: 'kg_given', label: 'How many kg of feed did the birds get today?', type: 'number', when: (v) => !!v.feed_id, hint: b.plan_kg_today ? `Plan for today (${esc(b.stage)}): <b>${qty(b.plan_kg_today)} kg</b>, that is ${esc(inBags(b.plan_kg_today, b.bag_kg))}.` : 'Weigh it, or count bags: 1 bag = the bag weight.' },
         { name: 'kg_wasted', label: 'Was any feed spilled or wasted? How many kg?', type: 'number' },
         { name: 'kg_eaten', label: 'If you measured it: kg the birds actually ate', type: 'number', hint: 'Leave empty if you did not measure.' },
         { name: 'feed_unusual', label: 'Did the birds eat much more or much less than usual?', type: 'chips', options: [['', 'Normal'], ['more', 'More'], ['less', 'Less']], value: '' },
@@ -453,15 +472,19 @@ async function dailyForm(ctx: ViewCtx, id: number, home: Home, back: () => void)
     calc: (v) => {
       const alive = b.alive + int(v.added) - int(v.deaths) - int(v.removed);
       const f = feeds.find((x) => String(x.id) === v.feed_id);
-      const left = f ? f.available - num(v.bags_issued) : null;
+      const given = num(v.kg_given);
+      const left = f ? Math.round((f.available_kg - given) * 10) / 10 : 0;
       return `<h2>After this record</h2><div class="pl-group">${row('Alive at the start of today', qty(b.alive))}${row('Died', qty(int(v.deaths)))}${int(v.added) ? row('Added', qty(int(v.added))) : ''}${int(v.removed) ? row('Removed', qty(int(v.removed))) : ''}
         ${row('<b>Alive now</b>', `<b class="${alive < 0 ? 'bad-text' : ''}">${qty(alive)}</b>`, 'pl-total')}</div>
-        ${f ? `<div class="pl-group">${row(`${esc(f.name)} in store`, `${qty(f.available)} bags`)}${row('Given today', `${qty(num(v.bags_issued))} bags`)}${row('<b>Left in store</b>', `<b class="${(left ?? 0) < 0 ? 'bad-text' : ''}">${qty(left ?? 0)} bags</b>`, 'pl-total')}</div>` : ''}
+        ${f ? `<div class="pl-group">${row(`${esc(f.name)} in store`, `${qty(f.available_kg)} kg`)}${row('Given today', `${qty(given)} kg${given ? ` (${esc(inBags(given, f.bag_kg))})` : ''}`)}
+          ${b.plan_kg_today ? row('Plan for today', `${qty(b.plan_kg_today)} kg`) : ''}
+          ${row('<b>Left in store</b>', `<b class="${left < 0 ? 'bad-text' : ''}">${qty(left)} kg</b>`, 'pl-total')}${row('', esc(inBags(Math.max(0, left), f.bag_kg)))}</div>
+          ${b.plan_kg_today && given > b.plan_kg_today * 1.15 ? `<div class="callout callout-warn">${icon('alert', 16)}<span>More than today's plan. Was some wasted?</span></div>` : ''}` : ''}
         <p class="muted small">Saving again for the same day changes that day's record. Changes are logged.</p>`;
     },
     save: async (v) => {
       await call('pb_save_daily', { form: { batch_id: id, day: v.day, deaths: int(v.deaths), cause: v.cause, disposed: v.disposed !== '0', sick: int(v.sick), removed: int(v.removed), added: int(v.added),
-        feed_id: v.feed_id ? Number(v.feed_id) : null, bags_issued: v.feed_id ? num(v.bags_issued) : 0, kg_eaten: num(v.kg_eaten), kg_wasted: num(v.kg_wasted), water_l: num(v.water_l),
+        feed_id: v.feed_id ? Number(v.feed_id) : null, kg_given: v.feed_id ? num(v.kg_given) : 0, bags_issued: 0, kg_eaten: num(v.kg_eaten), kg_wasted: num(v.kg_wasted), water_l: num(v.water_l),
         feed_unusual: v.feed_unusual, observations: v.observations, problems: v.problems, tomorrow: v.tomorrow } });
       toast('Record saved'); ctx.go('batches', { open: id });
     },

@@ -40,6 +40,8 @@ pub struct BatchForm {
     pub planned_birds: i64, pub arrival_date: String, pub age_at_arrival: i64, pub weeks: i64, pub sell_age_weeks: i64, pub expected_sell: i64,
     pub expected_weight_kg: f64, pub price_per: String, pub expected_price_kobo: i64, pub budget_kobo: i64,
     pub bags_per_100: f64, pub bag_kg: f64, pub plan_starter: f64, pub plan_grower: f64, pub plan_finisher: f64, pub feed_change: String,
+    /// Share of the feed plan that is starter (the farm's practical split is 30% starter, 70% finisher) and how many weeks the starter lasts.
+    pub starter_pct: f64, pub starter_weeks: i64,
     pub chicks_ordered: i64, pub chicks_delivered: i64, pub dead_on_arrival: i64, pub chicks_paid_for: i64, pub chick_price_kobo: i64, pub chick_transport_kobo: i64,
     pub chick_supplier: String, pub chick_amount_paid_kobo: i64, pub supplier_receipt: bool, pub hatchery_vaccines: String, pub notes: String,
     /// Add the broiler day 1–56 planning timetable (vet confirmation required).
@@ -78,13 +80,20 @@ pub fn save_batch(conn: &Connection, f: &BatchForm, who: &str) -> Result<i64, St
     for (q, n) in [(f.bags_per_100, "Bags per 100 birds"), (f.plan_starter, "Starter bags"), (f.plan_grower, "Grower bags"), (f.plan_finisher, "Finisher bags"), (f.expected_weight_kg, "Selling weight")] { check_qty(q, n)?; }
     if !(f.bag_kg > 0.0 && f.bag_kg <= 1000.0) { return Err("What is the weight of one bag of feed (kg)?".into()); }
     if f.dead_on_arrival > f.chicks_delivered { return Err("Dead on arrival cannot be more than the chicks delivered.".into()); }
+    if !(0.0..=100.0).contains(&f.starter_pct) { return Err("Starter share must be from 0 to 100%".into()); }
+    let weeks_total = f.weeks.max(1);
+    if f.starter_weeks < 0 || f.starter_weeks > weeks_total { return Err(format!("Starter weeks must be from 0 to {weeks_total}")); }
+    // The plan in whole bags: starter = share of the total (rounded), finisher = the rest.
+    let total_bags = (f.planned_birds as f64 / 100.0 * f.bags_per_100).round();
+    let (starter_bags, finisher_bags) = if f.plan_starter + f.plan_finisher > 0.0 { (f.plan_starter, f.plan_finisher) } else { let st = (total_bags * f.starter_pct / 100.0).round(); (st, (total_bags - st).max(0.0)) };
+    let f = &BatchForm { plan_starter: starter_bags, plan_finisher: finisher_bags, plan_grower: 0.0, ..f.clone() };
     let price_per = if f.price_per == "kg" { "kg" } else { "bird" };
     let bird_type = if f.bird_type.trim().is_empty() { "Broilers" } else { f.bird_type.trim() };
     let vals = params![f.farm_id, name, bird_type, f.breed.trim(), f.house.trim(), f.manager.trim(), f.planned_birds, f.arrival_date, f.age_at_arrival.max(0), f.weeks.max(0), f.sell_age_weeks.max(0),
         f.expected_sell, f.expected_weight_kg, price_per, f.expected_price_kobo, f.budget_kobo, f.bags_per_100, f.bag_kg, f.plan_starter, f.plan_grower, f.plan_finisher, f.feed_change.trim(),
         f.chicks_ordered, f.chicks_delivered, f.dead_on_arrival, f.chicks_paid_for, f.chick_price_kobo, f.chick_transport_kobo, f.chick_supplier.trim(), f.chick_amount_paid_kobo, f.supplier_receipt as i64,
-        f.hatchery_vaccines.trim(), f.notes.trim()];
-    const COLS: &str = "farm_id,name,bird_type,breed,house,manager,planned_birds,arrival_date,age_at_arrival,weeks,sell_age_weeks,expected_sell,expected_weight_kg,price_per,expected_price_kobo,budget_kobo,bags_per_100,bag_kg,plan_starter,plan_grower,plan_finisher,feed_change,chicks_ordered,chicks_delivered,dead_on_arrival,chicks_paid_for,chick_price_kobo,chick_transport_kobo,chick_supplier,chick_amount_paid_kobo,supplier_receipt,hatchery_vaccines,notes";
+        f.hatchery_vaccines.trim(), f.notes.trim(), f.starter_pct, f.starter_weeks];
+    const COLS: &str = "farm_id,name,bird_type,breed,house,manager,planned_birds,arrival_date,age_at_arrival,weeks,sell_age_weeks,expected_sell,expected_weight_kg,price_per,expected_price_kobo,budget_kobo,bags_per_100,bag_kg,plan_starter,plan_grower,plan_finisher,feed_change,chicks_ordered,chicks_delivered,dead_on_arrival,chicks_paid_for,chick_price_kobo,chick_transport_kobo,chick_supplier,chick_amount_paid_kobo,supplier_receipt,hatchery_vaccines,notes,starter_pct,starter_weeks";
     let id = match f.id {
         Some(id) => {
             let set: String = COLS.split(',').enumerate().map(|(i, c)| format!("{c}=?{}", i + 1)).collect::<Vec<_>>().join(",");
@@ -169,6 +178,8 @@ pub struct FeedStock {
     pub opening: f64, pub purchased: f64, pub issued: f64, pub damaged: f64, pub returned: f64, pub available: f64,
     pub avg_price_kobo: i64, pub value_kobo: i64, pub owed_kobo: i64, pub last_supplier: String, pub last_price_kobo: i64,
     pub daily_bags: f64, pub days_left: Option<f64>, pub finish_date: String, pub buy_bags: f64,
+    /// The same in kg: what is in the store and what is used a day.
+    pub available_kg: f64, pub daily_kg: f64,
     /// normal | reducing | restock | urgent | finished
     pub level: String, pub message: String,
 }
@@ -185,6 +196,7 @@ pub fn feed_stock(conn: &Connection, id: i64) -> Result<FeedStock, String> {
         |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?))).map_err(e)?;
     s.opening = o; s.purchased = p; s.issued = i; s.damaged = dm; s.returned = rt; s.owed_kobo = owed;
     s.available = ((o + p + rt - i - dm) * 1000.0).round() / 1000.0;
+    s.available_kg = (s.available * s.bag_kg * 10.0).round() / 10.0;
     s.avg_price_kobo = if bought > 0.0 { (amt as f64 / bought).round() as i64 } else { 0 };
     s.value_kobo = (s.available.max(0.0) * s.avg_price_kobo as f64).round() as i64;
     if let Some((sup, pr)) = conn.query_row("SELECT supplier,price_kobo FROM pb_feed_moves WHERE feed_id=?1 AND kind='purchase' ORDER BY move_date DESC,id DESC LIMIT 1", [id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))).optional().map_err(e)? {
@@ -195,6 +207,7 @@ pub fn feed_stock(conn: &Connection, id: i64) -> Result<FeedStock, String> {
         params![id, today()], |r| Ok((r.get(0)?, r.get(1)?))).map_err(e)?;
     if days > 0 && bags > 0.0 {
         s.daily_bags = bags / days as f64;
+        s.daily_kg = (s.daily_bags * s.bag_kg * 10.0).round() / 10.0;
         let left = s.available.max(0.0) / s.daily_bags;
         s.days_left = Some((left * 10.0).floor() / 10.0);
         s.finish_date = plus(&today(), left.floor() as i64);
@@ -227,7 +240,7 @@ pub fn feeds(conn: &Connection) -> Result<Vec<FeedStock>, String> {
 #[serde(default)]
 pub struct DailyForm {
     pub batch_id: i64, pub day: String, pub deaths: i64, pub cause: String, pub disposed: bool, pub sick: i64, pub removed: i64, pub added: i64,
-    pub feed_id: Option<i64>, pub bags_issued: f64, pub kg_eaten: f64, pub kg_wasted: f64, pub water_l: f64,
+    pub feed_id: Option<i64>, /** kg taken from the store to the birds */ pub kg_given: f64, pub bags_issued: f64, pub kg_eaten: f64, pub kg_wasted: f64, pub water_l: f64,
     pub feed_unusual: String, pub observations: String, pub problems: String, pub tomorrow: String,
 }
 
@@ -235,7 +248,11 @@ pub fn save_daily(conn: &Connection, f: &DailyForm, who: &str) -> Result<i64, St
     if !valid_date(&f.day) { return Err("Choose the day".into()); }
     if f.day > today() { return Err("You cannot record a day that has not come yet.".into()); }
     for (v, n) in [(f.deaths, "Deaths"), (f.sick, "Sick birds"), (f.removed, "Birds removed"), (f.added, "Birds added")] { if !(0..=10_000_000).contains(&v) { return Err(format!("{n}: enter 0 or more")); } }
-    for (q, n) in [(f.bags_issued, "Bags"), (f.kg_eaten, "Kg eaten"), (f.kg_wasted, "Kg wasted"), (f.water_l, "Water")] { check_qty(q, n)?; }
+    for (q, n) in [(f.kg_given, "Kg given"), (f.bags_issued, "Bags"), (f.kg_eaten, "Kg eaten"), (f.kg_wasted, "Kg wasted"), (f.water_l, "Water")] { check_qty(q, n)?; }
+    // Feed is counted in kg; the store keeps bags of its own size.
+    let bag_kg: f64 = match f.feed_id { Some(fid) => conn.query_row("SELECT bag_kg FROM pb_feeds WHERE id=?1", [fid], |r| r.get(0)).optional().map_err(e)?.ok_or("Feed not found")?, None => 25.0 };
+    let kg_given = if f.kg_given > 0.0 { f.kg_given } else { f.bags_issued * bag_kg };
+    let f = &DailyForm { kg_given, bags_issued: kg_given / bag_kg, ..f.clone() };
     for (s, n) in [(&f.cause, "Cause"), (&f.feed_unusual, "Feed"), (&f.observations, "Observations"), (&f.problems, "Problems"), (&f.tomorrow, "Tomorrow")] { check_len(s, 500, n)?; }
     let (status, arrival): (String, String) = conn.query_row("SELECT status,arrival_date FROM pb_batches WHERE id=?1", [f.batch_id], |r| Ok((r.get(0)?, r.get(1)?))).optional().map_err(e)?.ok_or("Batch not found")?;
     if status != "open" { return Err("This batch is closed.".into()); }
@@ -247,30 +264,30 @@ pub fn save_daily(conn: &Connection, f: &DailyForm, who: &str) -> Result<i64, St
     let alive_before = s.alive + od + or - oa;
     if f.deaths + f.removed > alive_before + f.added { return Err(format!("Only {} birds are alive. Deaths and removals cannot be more than that.", alive_before + f.added)); }
     if f.sick > alive_before + f.added - f.deaths - f.removed { return Err("Sick birds cannot be more than the birds alive.".into()); }
-    if f.bags_issued > 0.0 && f.feed_id.is_none() { return Err("Which feed did you give?".into()); }
+    if f.kg_given > 0.0 && f.feed_id.is_none() { return Err("Which feed did you give?".into()); }
     if let Some(fid) = f.feed_id {
         if f.bags_issued > 0.0 {
             let st = feed_stock(conn, fid)?;
             let prev: f64 = match old { Some(o) => conn.query_row("SELECT COALESCE(SUM(bags),0) FROM pb_feed_moves WHERE daily_id=?1 AND feed_id=?2", params![o.0, fid], |r| r.get(0)).map_err(e)?, None => 0.0 };
-            if f.bags_issued > st.available + prev + 1e-9 { return Err(format!("Only {} bags of {} are in the store. Record the feed you bought first.", crate::db::format_qty(st.available + prev), st.name)); }
+            if f.bags_issued > st.available + prev + 1e-9 { return Err(format!("Only {} kg of {} is in the store. Record the feed you bought first.", crate::db::format_qty(((st.available + prev) * bag_kg * 10.0).round() / 10.0), st.name)); }
         }
     }
     let kg_eaten = if f.kg_eaten > 0.0 { f.kg_eaten } else { 0.0 };
     let id = match old {
         Some(o) => {
-            conn.execute("UPDATE pb_daily SET deaths=?1,cause=?2,disposed=?3,sick=?4,removed=?5,added=?6,feed_id=?7,bags_issued=?8,kg_eaten=?9,kg_wasted=?10,water_l=?11,feed_unusual=?12,observations=?13,problems=?14,tomorrow=?15,user_name=?16,updated_at=CURRENT_TIMESTAMP WHERE id=?17",
-                params![f.deaths, f.cause.trim(), f.disposed as i64, f.sick, f.removed, f.added, f.feed_id, f.bags_issued, kg_eaten, f.kg_wasted, f.water_l, f.feed_unusual.trim(), f.observations.trim(), f.problems.trim(), f.tomorrow.trim(), who, o.0]).map_err(e)?;
+            conn.execute("UPDATE pb_daily SET deaths=?1,cause=?2,disposed=?3,sick=?4,removed=?5,added=?6,feed_id=?7,bags_issued=?8,kg_eaten=?9,kg_wasted=?10,water_l=?11,feed_unusual=?12,observations=?13,problems=?14,tomorrow=?15,user_name=?16,kg_given=?18,updated_at=CURRENT_TIMESTAMP WHERE id=?17",
+                params![f.deaths, f.cause.trim(), f.disposed as i64, f.sick, f.removed, f.added, f.feed_id, f.bags_issued, kg_eaten, f.kg_wasted, f.water_l, f.feed_unusual.trim(), f.observations.trim(), f.problems.trim(), f.tomorrow.trim(), who, o.0, f.kg_given]).map_err(e)?;
             crate::audit::log(conn, who, "daily_edited", "pb_daily", Some(o.0), &format!("Changed the {} record (deaths {} → {})", f.day, o.1, f.deaths));
             o.0
         }
         None => {
-            conn.execute("INSERT INTO pb_daily(batch_id,day,deaths,cause,disposed,sick,removed,added,feed_id,bags_issued,kg_eaten,kg_wasted,water_l,feed_unusual,observations,problems,tomorrow,user_name) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)",
-                params![f.batch_id, f.day, f.deaths, f.cause.trim(), f.disposed as i64, f.sick, f.removed, f.added, f.feed_id, f.bags_issued, kg_eaten, f.kg_wasted, f.water_l, f.feed_unusual.trim(), f.observations.trim(), f.problems.trim(), f.tomorrow.trim(), who]).map_err(e)?;
+            conn.execute("INSERT INTO pb_daily(batch_id,day,deaths,cause,disposed,sick,removed,added,feed_id,bags_issued,kg_eaten,kg_wasted,water_l,feed_unusual,observations,problems,tomorrow,user_name,kg_given) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19)",
+                params![f.batch_id, f.day, f.deaths, f.cause.trim(), f.disposed as i64, f.sick, f.removed, f.added, f.feed_id, f.bags_issued, kg_eaten, f.kg_wasted, f.water_l, f.feed_unusual.trim(), f.observations.trim(), f.problems.trim(), f.tomorrow.trim(), who, f.kg_given]).map_err(e)?;
             conn.last_insert_rowid()
         }
     };
     conn.execute("DELETE FROM pb_feed_moves WHERE daily_id=?1", [id]).map_err(e)?;
-    if let (Some(fid), true) = (f.feed_id, f.bags_issued > 0.0) {
+    if let (Some(fid), true) = (f.feed_id, f.kg_given > 0.0) {
         conn.execute("INSERT INTO pb_feed_moves(feed_id,move_date,kind,bags,batch_id,daily_id,user_name) VALUES(?1,?2,'issue',?3,?4,?5,?6)", params![fid, f.day, f.bags_issued, f.batch_id, id, who]).map_err(e)?;
     }
     Ok(id)
@@ -491,6 +508,7 @@ pub struct Summary {
     pub deaths_today: i64, pub mortality_pct: f64, pub last_record: String, pub recorded_today: bool,
     // feed
     pub bags_per_100: f64, pub bag_kg: f64, pub planned_bags: f64, pub planned_kg: f64, pub buy_bags_plan: i64, pub plan_starter: f64, pub plan_grower: f64, pub plan_finisher: f64,
+    pub starter_pct: f64, pub starter_weeks: i64, pub starter_kg: f64, pub finisher_kg: f64, pub stage: String, pub plan_kg_today: f64, pub given_kg_today: f64, pub given_kg: f64,
     pub issued_bags: f64, pub eaten_kg: f64, pub wasted_kg: f64, pub plan_left_bags: f64, pub feed_cost_kobo: i64, pub feed_per_bird_kg: f64,
     // growth
     pub latest_avg_kg: Option<f64>, pub prev_avg_kg: Option<f64>, pub gain_kg: Option<f64>, pub adg_g: Option<f64>, pub fcr: Option<f64>, pub est_market_kg: Option<f64>, pub last_weighed: String,
@@ -510,7 +528,7 @@ pub fn summary(conn: &Connection, id: i64) -> Result<Summary, String> {
     let lim = limits(conn);
     let now = today();
     let mut s = conn.query_row("SELECT id,farm_id,name,bird_type,breed,house,manager,status,is_demo,arrival_date,age_at_arrival,weeks,sell_age_weeks,planned_birds,chicks_ordered,chicks_delivered,dead_on_arrival,
-        bags_per_100,bag_kg,plan_starter,plan_grower,plan_finisher,budget_kobo,price_per,expected_price_kobo,expected_weight_kg,chicks_paid_for,chick_price_kobo,chick_transport_kobo,chick_amount_paid_kobo,end_date FROM pb_batches WHERE id=?1", [id], |r| {
+        bags_per_100,bag_kg,plan_starter,plan_grower,plan_finisher,budget_kobo,price_per,expected_price_kobo,expected_weight_kg,chicks_paid_for,chick_price_kobo,chick_transport_kobo,chick_amount_paid_kobo,end_date,starter_pct,starter_weeks FROM pb_batches WHERE id=?1", [id], |r| {
         let age0: i64 = r.get(10)?;
         let arrival: String = r.get(9)?;
         let paid_for: i64 = r.get(26)?; let price: i64 = r.get(27)?; let transport: i64 = r.get(28)?; let paid: i64 = r.get(29)?;
@@ -518,6 +536,7 @@ pub fn summary(conn: &Connection, id: i64) -> Result<Summary, String> {
             arrival_date: arrival.clone(), weeks: r.get(11)?, sell_age_weeks: r.get(12)?, planned_birds: r.get(13)?, chicks_ordered: r.get(14)?, chicks_delivered: r.get(15)?, dead_on_arrival: r.get(16)?,
             bags_per_100: r.get(17)?, bag_kg: r.get(18)?, plan_starter: r.get(19)?, plan_grower: r.get(20)?, plan_finisher: r.get(21)?, budget_kobo: r.get(22)?, price_per: r.get(23)?, expected_price_kobo: r.get(24)?, expected_weight_kg: r.get(25)?, ..Default::default() };
         let end: String = r.get(30)?;
+        s.starter_pct = r.get(31)?; s.starter_weeks = r.get(32)?;
         let upto = if s.status == "closed" && !end.is_empty() { end } else { today() };
         s.age_days = d(&arrival).zip(d(&upto)).map(|(a, b)| (b - a).num_days() + age0).unwrap_or(age0);
         s.sell_date = plus(&arrival, s.sell_age_weeks * 7 - age0);
@@ -544,6 +563,16 @@ pub fn summary(conn: &Connection, id: i64) -> Result<Summary, String> {
     s.planned_kg = (s.planned_bags * s.bag_kg * 1000.0).round() / 1000.0;
     s.buy_bags_plan = s.planned_bags.ceil() as i64;
     s.issued_bags = sum_f(conn, "SELECT SUM(bags) FROM pb_feed_moves WHERE batch_id=?1 AND kind='issue'", id)?;
+    // The plan in kg, by stage, and what that means for one day.
+    s.starter_kg = s.plan_starter * s.bag_kg;
+    s.finisher_kg = (s.plan_finisher + s.plan_grower) * s.bag_kg;
+    let starter_days = (s.starter_weeks * 7).max(0);
+    let finisher_days = ((s.weeks - s.starter_weeks) * 7).max(0);
+    let in_starter = s.age_days <= starter_days;
+    s.stage = if in_starter { "Starter".into() } else { "Finisher".into() };
+    s.plan_kg_today = ((if in_starter { if starter_days > 0 { s.starter_kg / starter_days as f64 } else { 0.0 } } else if finisher_days > 0 { s.finisher_kg / finisher_days as f64 } else { 0.0 }) * 10.0).round() / 10.0;
+    s.given_kg = sum_f(conn, "SELECT SUM(kg_given) FROM pb_daily WHERE batch_id=?1", id)?;
+    s.given_kg_today = conn.query_row("SELECT COALESCE(SUM(kg_given),0) FROM pb_daily WHERE batch_id=?1 AND day=?2", params![id, now], |r| r.get(0)).map_err(e)?;
     s.wasted_kg = sum_f(conn, "SELECT SUM(kg_wasted) FROM pb_daily WHERE batch_id=?1", id)?;
     let issued_kg = sum_f(conn, "SELECT SUM(m.bags*f.bag_kg) FROM pb_feed_moves m JOIN pb_feeds f ON f.id=m.feed_id WHERE m.batch_id=?1 AND m.kind='issue'", id)?;
     let told_eaten = sum_f(conn, "SELECT SUM(kg_eaten) FROM pb_daily WHERE batch_id=?1", id)?;
@@ -607,6 +636,7 @@ pub fn summary(conn: &Connection, id: i64) -> Result<Summary, String> {
         let next_due: Vec<(String, String)> = rows(conn, "SELECT name,next_due FROM pb_health WHERE batch_id=?1 AND kind<>'plan' AND next_due<>'' AND next_due<=date(?2,'+2 day') AND next_due>=?2", params![id, now], |r| Ok((r.get(0)?, r.get(1)?)))?;
         for (n, dd) in next_due { a("warn", format!("{n} is due again on {dd}.")); }
         if !s.eligible { a("bad", format!("Medicine withdrawal: do not sell or slaughter before {}.", s.withdrawal_until)); }
+        if s.plan_kg_today > 0.0 && s.given_kg_today > s.plan_kg_today * 1.15 { a("warn", format!("Feed given today ({} kg) is more than the plan for today ({} kg). Check for waste.", crate::db::format_qty(s.given_kg_today), crate::db::format_qty(s.plan_kg_today))); }
         if s.issued_bags > s.planned_bags + 1e-9 && s.planned_bags > 0.0 { a("bad", format!("Feed used ({} bags) is more than the plan ({} bags). Check for waste or wrong records.", crate::db::format_qty(s.issued_bags), crate::db::format_qty(s.planned_bags))); }
         if s.age_days >= 7 && (s.last_weighed.is_empty() || d(&s.last_weighed).zip(d(&now)).map(|(a, b)| (b - a).num_days() > lim.weigh_days).unwrap_or(true)) { a("warn", "Weekly weighing is due.".into()); }
         if s.days_to_sell >= 0 && s.days_to_sell <= 7 { a("info", format!("Birds reach selling age in {} day{}.", s.days_to_sell, if s.days_to_sell == 1 { "" } else { "s" })); }
@@ -808,7 +838,7 @@ pub mod tests {
     fn batch(arrival: &str) -> BatchForm {
         BatchForm { name: "Batch 1".into(), bird_type: "Broilers".into(), planned_birds: 650, arrival_date: arrival.into(), age_at_arrival: 1, weeks: 8, sell_age_weeks: 8,
             bags_per_100: 17.0, bag_kg: 25.0, chicks_ordered: 650, chicks_delivered: 650, dead_on_arrival: 5, chicks_paid_for: 650, chick_price_kobo: 80_000, chick_transport_kobo: 2_000_000,
-            chick_amount_paid_kobo: 50_000_000, price_per: "bird".into(), expected_price_kobo: 800_000, add_timetable: true, ..Default::default() }
+            chick_amount_paid_kobo: 50_000_000, price_per: "bird".into(), expected_price_kobo: 800_000, add_timetable: true, starter_pct: 30.0, starter_weeks: 4, ..Default::default() }
     }
 
     /// The farm's own example: 650 birds × 17 bags per 100 = 110.5 bags = 2,762.5 kg.
@@ -819,6 +849,8 @@ pub mod tests {
         let id = save_batch(&c, &batch(&start), "M").unwrap();
         let s = summary(&c, id).unwrap();
         assert_eq!((s.planned_bags, s.planned_kg, s.buy_bags_plan), (110.5, 2762.5, 111));
+        // 30% starter / 70% finisher of the whole bags (111): 33 starter, 78 finisher.
+        assert_eq!((s.plan_starter, s.plan_finisher), (33.0, 78.0));
         assert_eq!(s.initial_live, 645);
         assert_eq!(s.age_days, 21);
         assert_eq!(s.plan.len(), BROILER_TIMETABLE.len());
@@ -826,7 +858,7 @@ pub mod tests {
         // Feed store: 20 bags of starter at ₦15,000, then 2 bags a day.
         let feed = save_feed(&c, &FeedForm { name: "Broiler starter".into(), bag_kg: 25.0, min_bags: 10.0, full_bags: 40.0, opening_bags: 20.0, opening_price_kobo: 1_500_000, ..Default::default() }, "M").unwrap();
         for i in 0..3 {
-            save_daily(&c, &DailyForm { batch_id: id, day: plus(&today(), i - 2), deaths: 2, feed_id: Some(feed), bags_issued: 2.0, disposed: true, ..Default::default() }, "W").unwrap();
+            save_daily(&c, &DailyForm { batch_id: id, day: plus(&today(), i - 2), deaths: 2, feed_id: Some(feed), kg_given: 50.0, disposed: true, ..Default::default() }, "W").unwrap();
         }
         let f = feed_stock(&c, feed).unwrap();
         assert_eq!(f.available, 14.0);
@@ -836,17 +868,38 @@ pub mod tests {
         assert_eq!(f.level, "reducing", "14 of 40 bags = 35%");
     }
 
+    /// The farm's 600-bird example: 102 bags = 31 starter (775 kg) + 71 finisher (1,775 kg);
+    /// a day of 27 kg takes 1 bag and 2 kg out of the store exactly.
+    #[test]
+    fn six_hundred_birds_split_and_daily_kg() {
+        let c = conn();
+        let id = save_batch(&c, &BatchForm { planned_birds: 600, chicks_delivered: 600, chicks_ordered: 600, dead_on_arrival: 0, starter_pct: 30.0, starter_weeks: 4, ..batch(&plus(&today(), -2)) }, "M").unwrap();
+        let s = summary(&c, id).unwrap();
+        assert_eq!((s.planned_bags, s.plan_starter, s.plan_finisher, s.starter_kg, s.finisher_kg), (102.0, 31.0, 71.0, 775.0, 1775.0));
+        assert_eq!((s.stage.as_str(), s.plan_kg_today), ("Starter", 27.7), "775 kg over 28 days");
+        let feed = save_feed(&c, &FeedForm { name: "Starter".into(), bag_kg: 25.0, opening_bags: 30.0, opening_price_kobo: 1_500_000, ..Default::default() }, "M").unwrap();
+        save_daily(&c, &DailyForm { batch_id: id, day: today(), feed_id: Some(feed), kg_given: 27.0, ..Default::default() }, "W").unwrap();
+        let f = feed_stock(&c, feed).unwrap();
+        assert_eq!(f.available_kg, 723.0);
+        assert!((f.available - 28.92).abs() < 1e-9);
+        // Birds: started 600, 1 died, 50 sold → 549.
+        save_daily(&c, &DailyForm { batch_id: id, day: plus(&today(), -1), deaths: 1, ..Default::default() }, "W").unwrap();
+        save_sale(&c, &SaleForm { batch_id: id, sale_date: today(), birds: 50, price_kobo: 1_000_000, paid_kobo: 50_000_000, method: "Cash".into(), ..Default::default() }, &me(Role::Owner)).unwrap();
+        let s = summary(&c, id).unwrap();
+        assert_eq!((s.initial_live, s.deaths, s.sold_birds, s.alive), (600, 1, 50, 549));
+    }
+
     #[test]
     fn levels_withdrawal_sales_and_profit() {
         let c = conn();
         let id = save_batch(&c, &batch(&plus(&today(), -40)), "M").unwrap();
         let feed = save_feed(&c, &FeedForm { name: "Finisher".into(), bag_kg: 25.0, min_bags: 5.0, full_bags: 40.0, opening_bags: 30.0, opening_price_kobo: 1_000_000, ..Default::default() }, "M").unwrap();
-        save_daily(&c, &DailyForm { batch_id: id, day: today(), deaths: 5, feed_id: Some(feed), bags_issued: 20.0, ..Default::default() }, "W").unwrap();
+        save_daily(&c, &DailyForm { batch_id: id, day: today(), deaths: 5, feed_id: Some(feed), kg_given: 500.0, ..Default::default() }, "W").unwrap();
         let f = feed_stock(&c, feed).unwrap();
         assert_eq!((f.available, f.level.as_str()), (10.0, "urgent"), "10 of 40 = 25%, and 20 bags a day leaves under a day");
         // More than the store has is refused in plain words.
-        let err = save_daily(&c, &DailyForm { batch_id: id, day: plus(&today(), -1), feed_id: Some(feed), bags_issued: 11.0, ..Default::default() }, "W").unwrap_err();
-        assert!(err.contains("Only 10 bags"), "{err}");
+        let err = save_daily(&c, &DailyForm { batch_id: id, day: plus(&today(), -1), feed_id: Some(feed), kg_given: 251.0, ..Default::default() }, "W").unwrap_err();
+        assert!(err.contains("Only 250 kg"), "{err}");
         // Medicine with a 5-day withdrawal blocks sale.
         save_health(&c, &HealthForm { batch_id: id, kind: "medicine".into(), name: "Antibiotic X".into(), done_date: plus(&today(), -2), end_date: today(), withdrawal_days: 5, success: true, ..Default::default() }, "V").unwrap();
         let s = summary(&c, id).unwrap();
