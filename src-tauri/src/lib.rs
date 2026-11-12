@@ -32,6 +32,7 @@ mod knowledge;
 mod license;
 mod onboarding;
 mod palm_oil;
+mod poultry;
 mod processing;
 mod purchases;
 mod recovery;
@@ -147,7 +148,7 @@ pub fn run() {
             crops::list_plots, crops::save_plot, crops::archive_plot, crops::list_crop_cycles, crops::get_crop_cycle, crops::save_crop_cycle, crops::close_crop_cycle,
             crops::add_crop_activity, crops::add_harvest, crops::delete_crop_entry,
             // processing
-            palm_oil::process_products, palm_oil::list_palm_runs, palm_oil::get_palm_run, palm_oil::save_process_run, palm_oil::record_run_sale, palm_oil::delete_palm_run,
+            palm_oil::process_products, palm_oil::list_palm_runs, palm_oil::get_palm_run, palm_oil::save_process_run, palm_oil::record_run_sale, poultry::pb_home, poultry::pb_batch, poultry::pb_save_batch, poultry::pb_close_batch, poultry::pb_save_daily, poultry::pb_save_feed, poultry::pb_feed_move, poultry::pb_save_health, poultry::pb_mark_plan, poultry::pb_save_weight, poultry::pb_save_expense, poultry::pb_approve_expense, poultry::pb_save_sale, poultry::pb_save_limits, poultry::pb_delete, palm_oil::delete_palm_run,
             processing::list_processing_batches, processing::get_processing_batch, processing::save_processing_batch, processing::set_processing_stage,
             processing::add_processing_input, processing::add_processing_output, processing::delete_processing_entry, processing::close_processing_batch,
             // advisory, knowledge library and reminders

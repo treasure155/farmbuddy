@@ -20,6 +20,25 @@ mod tests {
         let cycle: i64 = conn.query_row("SELECT id FROM crop_cycles LIMIT 1", [], |r| r.get(0)).unwrap();
         let batch: i64 = conn.query_row("SELECT id FROM processing_batches LIMIT 1", [], |r| r.get(0)).unwrap();
         let palm: i64 = conn.query_row("SELECT id FROM palm_runs LIMIT 1", [], |r| r.get(0)).unwrap();
+        conn.execute("INSERT OR IGNORE INTO users(id,username,full_name,password_hash,role) VALUES(1,'owner','Owner','x','owner')", []).unwrap();
+        let owner_id: i64 = conn.query_row("SELECT id FROM users WHERE role='owner' ORDER BY id LIMIT 1", [], |r| r.get(0)).unwrap();
+        let fx_owner = || crate::auth::Session { user_id: owner_id, username: "owner".into(), full_name: "Owner".into(), role: crate::auth::Role::Owner, last_seen: std::time::Instant::now() };
+        let pb = {
+            use crate::poultry::*;
+            let day = |n: i64| (chrono::Local::now() - chrono::Duration::days(n)).format("%Y-%m-%d").to_string();
+            let id = save_batch(&conn, &BatchForm { name: "Batch 1 (December broilers)".into(), bird_type: "Broilers".into(), breed: "Arbor Acres".into(), house: "House A".into(), planned_birds: 650, arrival_date: day(24), age_at_arrival: 1, weeks: 8, sell_age_weeks: 8,
+                bags_per_100: 17.0, bag_kg: 25.0, plan_starter: 30.0, plan_grower: 0.0, plan_finisher: 80.5, chicks_ordered: 650, chicks_delivered: 650, dead_on_arrival: 4, chicks_paid_for: 650, chick_price_kobo: 80_000,
+                chick_transport_kobo: 1_500_000, chick_amount_paid_kobo: 53_500_000, price_per: "bird".into(), expected_price_kobo: 850_000, budget_kobo: 400_000_000, add_timetable: true, ..Default::default() }, "Manager").unwrap();
+            let f1 = save_feed(&conn, &FeedForm { name: "Broiler starter".into(), brand: "Top Feeds".into(), bag_kg: 25.0, min_bags: 6.0, full_bags: 40.0, opening_bags: 40.0, opening_price_kobo: 1_550_000, ..Default::default() }, "Manager").unwrap();
+            save_feed(&conn, &FeedForm { name: "Broiler finisher".into(), bag_kg: 25.0, min_bags: 10.0, full_bags: 60.0, opening_bags: 0.0, ..Default::default() }, "Manager").unwrap();
+            for k in (1..=6).rev() { save_daily(&conn, &DailyForm { batch_id: id, day: day(k), deaths: (k % 3) as i64, feed_id: Some(f1), bags_issued: 3.0, disposed: true, observations: if k == 2 { "Two birds weak, kept apart".into() } else { String::new() }, sick: if k <= 2 { 2 } else { 0 }, ..Default::default() }, "Worker").unwrap(); }
+            save_weight(&conn, &WeighForm { batch_id: id, weigh_date: day(10), sampled: 10, total_kg: 4.8, ..Default::default() }, "Worker").unwrap();
+            save_weight(&conn, &WeighForm { batch_id: id, weigh_date: day(3), sampled: 10, total_kg: 7.9, ..Default::default() }, "Worker").unwrap();
+            save_health(&conn, &HealthForm { batch_id: id, kind: "vaccine".into(), name: "Newcastle (Lasota)".into(), purpose: "Newcastle disease".into(), done_date: day(18), method: "Drinking water".into(), birds: 640, cost_kobo: 450_000, given_by: "Manager".into(), success: true, ..Default::default() }, "Manager").unwrap();
+            save_expense(&conn, &ExpenseForm { batch_id: id, spent_date: day(20), category: "Bedding materials".into(), item: "Wood shavings".into(), quantity: 10.0, unit_price_kobo: 150_000, paid_kobo: 1_500_000, method: "Cash".into(), ..Default::default() }, &fx_owner()).unwrap();
+            save_sale(&conn, &SaleForm { batch_id: id, status: "reserved".into(), sale_date: day(0), birds: 40, price_kobo: 850_000, buyer: "Mama Ekaette".into(), ..Default::default() }, &fx_owner()).unwrap();
+            id
+        };
         let article: i64 = conn.query_row("SELECT id FROM knowledge_articles WHERE slug='vaccination-records'", [], |r| r.get(0)).unwrap();
         let ids: Vec<i64> = crate::farms::rows(&conn, "SELECT id FROM flocks ORDER BY id", [], |r| r.get(0)).unwrap();
         let flocks: Vec<_> = ids.iter().map(|id| crate::flocks::summary(&conn, *id).unwrap()).collect();
@@ -44,6 +63,8 @@ mod tests {
             "get_crop_cycle": v(serde_json::to_value(crate::crops::cycle_detail(&conn, cycle).unwrap())),
             "process_products": v(serde_json::to_value(crate::palm_oil::product_options(&conn).unwrap())),
             "list_palm_runs": v(serde_json::to_value(vec![crate::palm_oil::run_detail(&conn, palm).unwrap().run])),
+            "pb_home": v(serde_json::to_value(crate::poultry::home(&conn, &fx_owner()).unwrap())),
+            "pb_batch": v(serde_json::to_value(crate::poultry::detail(&conn, pb).unwrap())),
             "record_run_sale": serde_json::json!({"sale_id": 1, "receipt_id": 1, "receipt_no": "RCP-2611-00001", "run_finished": false}),
             "get_palm_run": v(serde_json::to_value(crate::palm_oil::run_detail(&conn, palm).unwrap())),
             "list_processing_batches": v(serde_json::to_value(vec![crate::processing::batch_detail(&conn, batch).unwrap().batch])),

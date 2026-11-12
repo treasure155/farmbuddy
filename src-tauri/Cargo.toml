@@ -1,6 +1,6 @@
 [package]
 name = "farmbuddy"
-version = "1.0.5"
+version = "1.0.7"
 description = "FarmBuddy - offline agricultural management and advisory system"
 authors = ["TechAlpha Global Concept"]
 edition = "2021"

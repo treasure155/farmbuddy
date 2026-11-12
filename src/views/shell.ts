@@ -24,6 +24,7 @@ export const VIEWS: ViewDef[] = [
   { id: 'home', label: 'nav.home', icon: 'home', min: 'cashier', load: () => import('./home') },
   { id: 'onboarding', label: 'nav.onboarding', icon: 'sliders', min: 'owner', load: () => import('./onboarding') },
   { id: 'farm', label: 'nav.farm', icon: 'home', min: 'cashier', load: () => import('./farm') },
+  { id: 'batches', label: 'nav.livestock', icon: 'bird', min: 'worker', when: mod('livestock'), load: () => import('./batches') },
   { id: 'livestock', label: 'nav.livestock', icon: 'bird', min: 'cashier', when: mod('livestock'), load: () => import('./livestock') },
   { id: 'health', label: 'nav.health', icon: 'shield', min: 'cashier', when: mod('livestock'), load: () => import('./health') },
   { id: 'crops', label: 'nav.crops', icon: 'sun', min: 'cashier', when: mod('crops'), load: () => import('./crops') },
@@ -57,7 +58,7 @@ export interface Group { id: string; label: string; hint: string; icon: string; 
 export const GROUPS: Group[] = [
   { id: 'farm', label: 'group.farm', hint: 'group.farm.hint', icon: 'sun', tone: 'green', tiles: [
     { label: 'tile.my_farm', hint: 'tile.my_farm.hint', icon: 'home', view: 'farm', min: 'cashier' },
-    { label: 'tile.livestock', hint: 'tile.livestock.hint', icon: 'bird', view: 'livestock', min: 'cashier', when: mod('livestock') },
+    { label: 'tile.livestock', hint: 'tile.livestock.hint', icon: 'bird', view: 'batches', min: 'worker', when: mod('livestock') },
     { label: 'tile.health_and_vaccination', hint: 'tile.health_and_vaccination.hint', icon: 'shield', view: 'health', min: 'cashier', when: mod('livestock') },
     { label: 'tile.crop_farming', hint: 'tile.crop_farming.hint', icon: 'sun', view: 'crops', min: 'cashier', when: mod('crops') },
     { label: 'tile.processing', hint: 'tile.processing.hint', icon: 'mill', view: 'palm-oil', min: 'cashier', when: mod('processing') || mod('palm') },
@@ -178,7 +179,7 @@ export function mountShell(root: HTMLElement, onSignOut: () => void, startView =
     </div>
     <nav class="tabbar" aria-label="Main">
       <button type="button" data-quick="home">${icon('home', 22)}<span>${esc(t('nav.home'))}</span></button>
-      ${auth.canSell() ? `<button type="button" data-quick="pos">${icon('till', 22)}<span>${esc(t('group.sell'))}</span></button>` : `<button type="button" data-quick="livestock">${icon('bird', 22)}<span>Records</span></button>`}
+      ${auth.canSell() ? `<button type="button" data-quick="pos">${icon('till', 22)}<span>${esc(t('group.sell'))}</span></button>` : `<button type="button" data-quick="batches">${icon('bird', 22)}<span>Records</span></button>`}
       <button type="button" data-quick="farm">${icon('sun', 22)}<span>${esc(t('group.farm'))}</span></button>
       <button type="button" data-quick="advisory">${icon('help', 22)}<span>${esc(t('group.advice'))}</span></button>
       <button type="button" data-quick="menu">${icon('grid', 22)}<span>Menu</span></button>

@@ -493,6 +493,41 @@ pub fn record_sale_tx(tx: &Transaction<'_>, s: &SaleForm, me: &Session) -> Resul
     Ok(SaleResult { sale_id, receipt_id, receipt_no, run_finished: finished == "closed" })
 }
 
+/// A sale made in "Sell produce" of an item that came from runs (garri, palm oil,
+/// kernel, pepper…) is counted against the open runs of that item, oldest first,
+/// so the run's sales, what is left and its profit stay right. Stock was already
+/// taken out by the receipt. Anything beyond what the runs have left (stock added
+/// by hand) is simply not tied to a run.
+pub fn link_pos_sale(conn: &Connection, receipt_id: i64, who: &str) -> Result<(), String> {
+    let items: Vec<(String, String, f64, f64, i64, i64)> = rows(conn, "SELECT p.name, p.unit, COALESCE(NULLIF(i.base_quantity,0), i.quantity), i.quantity, i.unit_price_kobo, i.line_total_kobo
+        FROM receipt_items i JOIN products p ON p.id=i.product_id WHERE i.receipt_id=?1", [receipt_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?;
+    let day: String = conn.query_row("SELECT substr(created_at,1,10) FROM receipts WHERE id=?1", [receipt_id], |r| r.get(0)).map_err(|e| e.to_string())?;
+    let buyer: String = conn.query_row("SELECT customer_name FROM receipts WHERE id=?1", [receipt_id], |r| r.get(0)).map_err(|e| e.to_string())?;
+    for (name, unit, base_qty, qty, price, total) in items {
+        if base_qty <= 0.0 { continue; }
+        for p in PRODUCTS {
+            let part = if p.main.eq_ignore_ascii_case(&name) { "main" } else if p.second.map(|x| x.eq_ignore_ascii_case(&name)).unwrap_or(false) { "second" } else { continue };
+            let col = if part == "main" { "stock_unit" } else { "second_stock_unit" };
+            let runs: Vec<i64> = rows(conn, &format!("SELECT id FROM palm_runs WHERE product=?1 AND status='open' AND {col}=?2 COLLATE NOCASE ORDER BY start_date, id"), params![p.key, unit], |r| r.get(0))?;
+            let mut rest = base_qty;
+            for run in runs {
+                if rest <= 1e-9 { break; }
+                let r = run_detail(conn, run)?.run;
+                let left = if part == "main" { r.oil_left } else { r.kernel_left };
+                let take = rest.min(left);
+                if take <= 1e-9 { continue; }
+                let share = take / base_qty;
+                conn.execute("INSERT INTO run_sales(run_id,part,sale_date,unit,quantity,stock_qty,price_kobo,amount_kobo,buyer,receipt_id,user_name) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+                    params![run, part, day, unit, qty * share, take, price, (total as f64 * share).round() as i64, buyer, receipt_id, who]).map_err(|e| e.to_string())?;
+                close_if_sold_out(conn, run)?;
+                rest -= take;
+            }
+            break;
+        }
+    }
+    Ok(())
+}
+
 // ------------------------------------------------------------------ the sums
 
 #[derive(Serialize, Debug, Clone, Default)]
@@ -792,14 +827,19 @@ mod tests {
         let a = save_form_tx(&tx, &garri(), "M").unwrap();
         let b = save_form_tx(&tx, &RunForm { made_qty: 3.0, ..garri() }, "M").unwrap();
         assert_eq!(stock(&tx, "Garri"), 9.0);
+        // A bag sold in "Sell produce" counts against the oldest open run (a).
+        let pid: i64 = tx.query_row("SELECT id FROM products WHERE name='Garri'", [], |r| r.get(0)).unwrap();
+        crate::poultry::tests::pos_sale(&tx, pid, 1.0, 6_000_000);
+        assert_eq!(run_detail(&tx, a).unwrap().run.oil_sold, 1.0);
+        assert_eq!(stock(&tx, "Garri"), 8.0);
         record_sale_tx(&tx, &sale(b, "bag", 2.0, 6_000_000), &me()).unwrap();
-        assert_eq!(run_detail(&tx, a).unwrap().run.oil_sold, 0.0, "a sale counts only against its own run");
+        assert_eq!(run_detail(&tx, a).unwrap().run.oil_sold, 1.0, "a sale counts only against its own run");
         assert_eq!(run_detail(&tx, b).unwrap().run.oil_left, 1.0);
         // Editing what came out cannot go below what was sold; raising it moves only the difference.
         let e = save_form_tx(&tx, &RunForm { id: Some(b), made_qty: 1.0, ..garri() }, "M").unwrap_err();
         assert!(e.contains("already sold 2 bags"), "{e}");
         save_form_tx(&tx, &RunForm { id: Some(b), made_qty: 4.0, ..garri() }, "M").unwrap();
-        assert_eq!(stock(&tx, "Garri"), 8.0, "6 + 4 − 2 sold");
+        assert_eq!(stock(&tx, "Garri"), 7.0, "6 + 4 − 2 − 1 sold");
         // A pepper harvest: no buying or mill, sold by the basket.
         let pepper = RunForm { product: "pepper".into(), start_date: "2026-11-02".into(), plot: "Behind the house".into(),
             workers: vec![NamedAmount { name: "Harvest help".into(), amount_kobo: 300_000 }], transport_kobo: 200_000, made_qty: 5.0, made_unit: "bag".into(),

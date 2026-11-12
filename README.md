@@ -6,6 +6,19 @@ FarmBuddy is an offline agricultural management and advisory system by **TechAlp
 
 It follows the eStock Manager v3.4.0 architecture (as the specification requires): **Tauri 2 + Rust + SQLite** for the backend and **TypeScript + Vite** for the interface. It has its own database file (`farmbuddy.sqlite3`), app ID (`online.techalphahub.farmbuddy`), first-run farm setup and visual design; there are no shop, eatery or laundry business types. All database work, validation, permissions, stock changes and money calculations happen in Rust; money is stored as whole kobo.
 
+## Status: version 1.0.7
+
+### What changed in 1.0.7
+- **All sales line up.** A sale in **Sell produce** of an item that came from runs (garri, palm oil, kernel, pepper, yam…) is counted against the open runs of that item, oldest first, so each run's sales, what is left and its profit stay right. **Live birds** sold in Sell produce come off the open batches (oldest first, only free birds past any medicine withdrawal). Sales made from Processing → Record a sale and Livestock → Sell birds already make receipts, so every sale is in Receipts, Buyers and the sales reports once. Voiding a receipt gives the quantity back everywhere. The "Live birds" item is created with the batch's price when a batch starts.
+- **Dashboards:** Processing now opens with a dashboard (runs selling and finished, sales this month, value in the barn, spent, received, result of finished runs, expected result, and a table by product: runs, got, sold, left, spent, received, profit or loss). Livestock opens with a dashboard across all running batches (birds alive, deaths, feed bags in store and feeds to buy, vaccinations due, sold and reserved, spent, sales, owed, expected profit). Each batch and each run keeps its own detailed page.
+
+## Status: version 1.0.6
+
+### What changed in 1.0.6
+- **Livestock from intake to sale, with plain questions** (`poultry.rs`, `src/views/batches.ts`, migration 011), built from the farm's poultry requirements: batch setup and chick intake (ordered, delivered, dead on arrival, cost, transport, supplier balance); **feed plan per 100 birds** (17 bags × 25 kg by default, changeable; 650 birds → 110.5 bags, 2,762.5 kg, buy 111) with starter/grower/finisher bags and **planned vs actual**; **feed store** per feed type (opening + purchases + returns − issues − damaged), average daily use, days left, finish date, bags to buy, and **restocking alerts** (50%, 25%, minimum, finished, finishes within 3 days; owner-configurable); **daily record** (deaths and cause, disposal, sick, removed, added, feed issued, wasted, water, observations, problems, tomorrow) with closing birds worked out; **broiler day 1–56 timetable** (vet confirmation required) with due/overdue; **vaccines, medicine and vitamins** with **withdrawal** (sale refused until it ends; never guessed); **weekly weighing** (average, gain, g/day, FCR, expected market weight); **expenses** by the farm's categories with **owner approval**; **sales** per bird or per kg with **reservations**, receipts, part payment and customer debts; **actual and projected profit or loss**, budget alert, supplier balances; printable report and CSV export; owner-only removal with a logged reason.
+- **Farm profit and loss** now includes livestock batch costs (chicks, feed used, health, expenses, delivery); their sales arrive through receipts, so each naira is counted once.
+- Fix: deleting a processing run asked for confirmation but never deleted.
+
 ## Status: version 1.0.5
 
 ### What changed in 1.0.5

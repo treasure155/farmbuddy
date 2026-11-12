@@ -144,7 +144,7 @@ pub const OWED_SQL: &str = "MAX(0,(r.total_kobo-r.returned_kobo)-(r.amount_paid_
 
 // ------------------------------------------------------------------ create
 
-pub fn create_receipt_tx(tx: &Transaction<'_>, input: CreateReceiptInput, cashier: &Session) -> Result<ReceiptDetail, String> {
+pub fn create_receipt_tx(tx: &Connection, input: CreateReceiptInput, cashier: &Session) -> Result<ReceiptDetail, String> {
     if input.items.is_empty() { return Err("Add at least one item to the receipt".into()); }
     if input.items.len() > 500 { return Err("A receipt can hold at most 500 lines".into()); }
     if input.discount_kobo < 0 { return Err("Discount cannot be negative".into()); }
@@ -302,6 +302,10 @@ pub fn create_receipt_tx(tx: &Transaction<'_>, input: CreateReceiptInput, cashie
     for (method, amount, reference) in &payments {
         tx.execute("INSERT INTO receipt_payments(receipt_id,method,amount_kobo,reference,received_by,shift_id) VALUES(?1,?2,?3,?4,?5,?6)", params![receipt_id, method, amount, reference, who, shift_id]).map_err(|e| e.to_string())?;
     }
+    // One sale, every place it belongs: produce from processing runs and harvests
+    // counts against its run, live birds against their batch.
+    crate::palm_oil::link_pos_sale(tx, receipt_id, &cashier.display_name())?;
+    crate::poultry::link_pos_sale(tx, receipt_id, &cashier.display_name())?;
     load_receipt(tx, receipt_id)
 }
 

@@ -376,6 +376,27 @@ export const GUIDE: GuideSection[] = [
     <p>FarmBuddy never assumes how much you will get, how big a measure is in your market, or what prices are. Every number is yours.</p>`,
   },
   {
+    id: 'batches', title: 'Livestock: from the day the birds arrive to the day they are sold', who: 'Everyone (money: Manager and Owner)',
+    html: `<p class="guide-lead">Open <b>Livestock</b>. Answer simple questions; FarmBuddy counts the birds, the feed, the money and the dates.</p>
+    <h3>1. Start a new batch (manager)</h3>
+    <p>Name, type and breed, house, who is responsible, how many birds, arrival date and age, weeks of rearing and selling age. The chicks: ordered, delivered, dead on arrival, how many you paid for, price, transport, supplier and what you paid. The feed plan: bags per 100 birds (your farm standard of 17 bags of 25 kg is filled in; change it if your plan is different), and starter, grower and finisher bags. The selling plan and budget. Tick the broiler timetable to add the day 1–56 vaccination and health calendar (your vet must confirm the dates and products).</p>
+    <p>Example: 650 birds × 17 bags ÷ 100 = <b>110.5 bags</b> (2,762.5 kg); buy 111 bags. This is a budget, not a fact: FarmBuddy compares it with the feed really used.</p>
+    <h3>2. Today's record (every day, anyone)</h3>
+    <p>Deaths and the cause, whether they were disposed of safely, sick birds kept apart, birds removed or added, which feed and how many bags were taken from the store, feed wasted, water, what you noticed, problems and tomorrow's plan. Saving again for the same day changes it, and the change is logged.</p>
+    <h3>3. Feed store (manager)</h3>
+    <p><b>Buy feed</b>: which feed, how many bags, price per bag, supplier, what you paid, condition and receipt. For a new feed say the bag weight, the level to warn you at and how many bags a full store holds. Each feed shows bags left, bags used a day, days left, the date it will finish and how many bags to buy. Warnings: reducing (50%), restocking required (25%), urgent (at your minimum), finished, and a critical reminder when it will finish within 3 days. The owner can change these limits (Livestock → Alert limits).</p>
+    <h3>4. Vaccines, medicine and vitamins</h3>
+    <p>Record every dose: name, brand or strain, how it was given, birds, expiry, cost, who gave it, reactions and the next due date. For medicine, enter the withdrawal period from the label or the vet: FarmBuddy then refuses to sell the birds before it ends. It never guesses a withdrawal period. On the timetable, tap <b>Record</b> when an item is done or <b>Not needed</b>.</p>
+    <h3>5. Weigh birds (weekly)</h3>
+    <p>How many birds you weighed and their total weight. FarmBuddy shows the average, the gain, grams a day, FCR (feed ÷ weight) and the expected weight on selling day.</p>
+    <h3>6. Money spent (manager)</h3>
+    <p>Category, item, quantity, price, who bought, supplier, paid and receipt. The owner approves expenses entered by others. Feed is recorded in the feed store and chicks on the batch, so nothing is counted twice.</p>
+    <h3>7. Sell birds</h3>
+    <p>Sell now or reserve for a buyer. Birds, per bird or per kg, price, buyer and phone, how paid (part payment is recorded as owed), delivery and its cost. A sale makes a receipt you can print or send on WhatsApp. Reserved birds are confirmed later with <b>Confirm sale</b>.</p>
+    <h3>The batch page</h3>
+    <p>Birds alive, deaths and %, feed bags left and when they finish, what to buy, vaccination due, money spent, sold, owed to you, profit or loss so far and the expected result when all birds are sold, with alerts. <b>Report</b> prints it (or saves as PDF); daily records export to Excel (CSV). Only the owner can remove a record, with a reason that is kept in the activity log.</p>`,
+  },
+  {
     id: 'advisory', title: 'Suggestions, reminders and the library',
     html: `<ul>
       <li><b>How it works, without internet:</b> FarmBuddy has a rules engine built into the app. Each time you open Suggestions it reads your own records on this computer (batches, crops, processing runs, stock, sales) and checks them against 20 rules. Nothing is sent anywhere. The owner can switch rules off, change their priority and the number of days under <b>Suggestion rules</b>. Guides and schedules arrive in the app or in signed update packages, which are checked before they are imported.</li>

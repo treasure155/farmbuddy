@@ -68,6 +68,7 @@ async function renderHome(ctx: ViewCtx) {
       ${manager ? choice('data-start="harvest"', 'fruit', 'Record a harvest', 'Cucumber, pepper, vegetables, melon, yam, ete') : ''}
       ${seller ? choice('data-sell', 'cash', 'Record a sale', open.length ? 'Sell from what is in your barn' : 'Start a run first') : ''}
     </section>
+    ${dashboard(runs, manager)}
     <section class="stack"><h2 class="section-title">In your barn</h2>
       ${open.length ? `<div class="run-grid">${open.map(runCard).join('')}</div>`
         : emptyState('Your barn is empty', 'Start a processing run or record a harvest. What you get goes into your barn, ready to sell.')}
@@ -84,6 +85,46 @@ async function renderHome(ctx: ViewCtx) {
     const o = el.closest<HTMLElement>('[data-run]');
     if (o) ctx.go('palm-oil', { open: Number(o.dataset.run) });
   };
+}
+
+/** The processing dashboard: what was done, what is in the barn, money in and out, by product. */
+function dashboard(runs: Run[], manager: boolean) {
+  if (!runs.length) return '';
+  const showMoney = manager && !runs.some((r) => r.money_hidden);
+  const month = isoDate(new Date()).slice(0, 7);
+  const open = runs.filter((r) => r.status === 'open');
+  const sum = (f: (r: Run) => number, list = runs) => list.reduce((t, r) => t + f(r), 0);
+  const monthSales = sum((r) => r.sales.filter((x) => x.sale_date.startsWith(month)).reduce((t, x) => t + x.amount_kobo, 0));
+  const finished = runs.filter((r) => r.status === 'closed');
+  const groups = new Map<string, Run[]>();
+  for (const r of runs) groups.set(r.product_label, [...(groups.get(r.product_label) ?? []), r]);
+  const amt = (list: Run[], f: (r: Run) => number, unit: (r: Run) => string) => {
+    const by = new Map<string, number>();
+    for (const r of list) { const v = f(r); if (v > 1e-9) by.set(unit(r), (by.get(unit(r)) ?? 0) + v); }
+    return [...by].map(([u, q]) => amount(round(q), u)).join(' + ') || '—';
+  };
+  const tile = (label: string, value: string, sub = '', tone = '') => `<div class="kpi ${tone}"><small>${label}</small><b>${value}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
+  return `<section class="stack"><h2 class="section-title">Dashboard</h2>
+    <div class="kpi-grid">
+      ${tile('Runs selling now', String(open.length), `${finished.length} finished`)}
+      ${tile('Runs this month', String(runs.filter((r) => r.start_date.startsWith(month)).length))}
+      ${showMoney ? `${tile('Sales this month', naira(monthSales))}
+        ${tile('In the barn, at today\'s price', naira(sum((r) => r.unsold_value_kobo, open)))}
+        ${tile('Spent on all runs', naira(sum((r) => r.total_cost_kobo)))}
+        ${tile('Received from all runs', naira(sum((r) => r.total_sales_kobo)))}
+        ${tile('Result of finished runs', `${sum((r) => r.profit_kobo, finished) < 0 ? 'Loss ' : 'Profit '}${naira(Math.abs(sum((r) => r.profit_kobo, finished)))}`, '', sum((r) => r.profit_kobo, finished) < 0 ? 'kpi-bad' : 'kpi-ok')}
+        ${tile('Expected from runs still selling', `${sum((r) => r.projected_profit_kobo, open) < 0 ? 'Loss ' : 'Profit '}${naira(Math.abs(sum((r) => r.projected_profit_kobo, open)))}`, 'if all is sold at today\'s price', sum((r) => r.projected_profit_kobo, open) < 0 ? 'kpi-bad' : 'kpi-ok')}` : ''}
+    </div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Product</th><th>Runs</th><th>Got</th><th>Sold</th><th>Left in barn</th>${showMoney ? '<th class="num">Spent</th><th class="num">Received</th><th class="num">Profit or loss</th>' : ''}</tr></thead><tbody>
+      ${[...groups].map(([label, list]) => {
+        const pl = sum((r) => (r.status === 'closed' ? r.profit_kobo : r.projected_profit_kobo), list);
+        return `<tr><td><b>${esc(label)}</b></td><td>${list.length} (${list.filter((r) => r.status === 'open').length} selling)</td>
+        <td>${esc(amt(list, (r) => r.oil_made, (r) => r.oil_unit))}</td><td>${esc(amt(list, (r) => r.oil_sold, (r) => r.oil_unit))}</td><td>${esc(amt(list.filter((r) => r.status === 'open'), (r) => r.oil_left, (r) => r.oil_unit))}</td>
+        ${showMoney ? `<td class="num">${naira(sum((r) => r.total_cost_kobo, list))}</td><td class="num">${naira(sum((r) => r.total_sales_kobo, list))}</td><td class="num ${pl < 0 ? 'bad-text' : 'ok-text'}">${pl < 0 ? '−' : ''}${naira(Math.abs(pl))}</td>` : ''}</tr>`;
+      }).join('')}
+    </tbody></table></div>
+    ${showMoney ? '<p class="muted small">Profit or loss counts finished runs as final and runs still selling at today\'s price. Sales from “Sell produce” are counted against the right run automatically.</p>' : ''}
+  </section>`;
 }
 
 function runCard(r: Run) {
@@ -588,7 +629,7 @@ async function renderRun(ctx: ViewCtx, id: number) {
   document.querySelector('[data-sell]')?.addEventListener('click', () => ctx.go('palm-oil', { sell: String(id) }));
   document.querySelector('[data-edit]')?.addEventListener('click', () => ctx.go('palm-oil', { edit: String(id) }));
   document.querySelector('[data-delete]')?.addEventListener('click', async () => {
-    if (!(await confirmDialog({ title: `Delete ${r.run_no}?`, message: 'What this run put into your barn is taken back out.', confirm: 'Delete', danger: true }))) return;
+    if ((await confirmDialog({ title: `Delete ${r.run_no}?`, message: 'What this run put into your barn is taken back out.', confirm: 'Delete', danger: true })) === null) return;
     try { await call('delete_palm_run', { id }); toast('Run deleted'); ctx.go('palm-oil'); } catch (ex) { toast(errText(ex), 'error'); }
   });
 }

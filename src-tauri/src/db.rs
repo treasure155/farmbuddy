@@ -8,7 +8,7 @@ use tauri::Manager;
 /// FarmBuddy uses its own database file, separate from eStock Manager.
 pub const DB_FILE: &str = "farmbuddy.sqlite3";
 #[cfg_attr(not(test), allow(dead_code))]
-pub const SCHEMA_VERSION: i64 = 10;
+pub const SCHEMA_VERSION: i64 = 11;
 
 pub fn db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
@@ -66,6 +66,9 @@ pub fn migrate(conn: &Connection) -> Result<(), String> {
     if user_version(conn)? < 10 {
         run_migration(conn, include_str!("../migrations/010_runs_and_sales.sql"), 10, true)?;
         crate::palm_oil::upgrade_sync(conn)?;
+    }
+    if user_version(conn)? < 11 {
+        run_migration(conn, include_str!("../migrations/011_poultry.sql"), 11, true)?;
     }
     // Built-in knowledge articles and sources are refreshed on every start;
     // articles the owner has edited are left alone.

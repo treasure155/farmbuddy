@@ -63,6 +63,7 @@ pub fn profit_loss(conn: &Connection, from: &str, to: &str, include_demo: bool) 
     // Sales from runs make receipts (counted above); only sales kept before 1.0.5 have none.
     let run_sales = sum(conn, &format!("SELECT SUM(s.amount_kobo) FROM run_sales s JOIN palm_runs x ON x.id=s.run_id WHERE {rund} AND s.receipt_id IS NULL AND s.sale_date BETWEEN ?1 AND ?2"), from, to)?;
     let run_costs = sum(conn, &format!("SELECT SUM(l.amount_kobo) FROM palm_run_lines l JOIN palm_runs x ON x.id=l.run_id WHERE {rund} AND l.line_type IN ('fruit','cost') AND l.entry_date BETWEEN ?1 AND ?2"), from, to)?
+        + crate::poultry::period_costs(conn, from, to, include_demo)?
         + sum(conn, &format!("SELECT SUM(s.transport_kobo+s.other_kobo) FROM run_sales s JOIN palm_runs x ON x.id=s.run_id LEFT JOIN receipts r ON r.id=s.receipt_id WHERE {rund} AND (r.id IS NULL OR r.payment_status<>'void') AND s.sale_date BETWEEN ?1 AND ?2"), from, to)?;
     p.revenue = vec![
         Line { label: "Produce sales on receipts (after returns)".into(), amount_kobo: till },
@@ -93,7 +94,7 @@ pub fn profit_loss(conn: &Connection, from: &str, to: &str, include_demo: bool) 
         Line { label: "Livestock running costs (feed, vaccines, labour…)".into(), amount_kobo: livestock },
         Line { label: "Crop costs (planting, field work, crop health, harvest)".into(), amount_kobo: crops },
         Line { label: "Processing costs (raw materials and processing)".into(), amount_kobo: processing },
-        Line { label: "Runs: buying, transport, mill, workers, other and selling costs".into(), amount_kobo: run_costs },
+        Line { label: "Runs and livestock batches: buying, feed used, health, workers, transport and other costs".into(), amount_kobo: run_costs },
         Line { label: "Storage costs".into(), amount_kobo: storage },
     ];
     // Cost carried into stock by processing batches closed in the period: it returns as cost of goods sold.

@@ -33,7 +33,19 @@ try { remote = out('git remote get-url origin'); } catch { /* none yet */ }
 if (!remote) { run(`git remote add origin ${REPO}`); console.log(`• GitHub repository: ${REPO}`); }
 
 const tag = `v${pkg}`;
-if (out(`git tag --list ${tag}`)) fail(`${tag} was already released. Raise the version in package.json, src-tauri/tauri.conf.json and src-tauri/Cargo.toml first.`);
+if (out(`git tag --list ${tag}`)) {
+  // Tagged here but never reached GitHub (e.g. the first push failed): push it now.
+  let onGitHub = '';
+  try { onGitHub = out(`git ls-remote --tags origin refs/tags/${tag}`); } catch { /* repository not reachable yet */ }
+  if (!onGitHub) {
+    const branch = out('git rev-parse --abbrev-ref HEAD');
+    console.log(`• ${tag} was tagged on this computer but not pushed yet. Pushing it now.`);
+    run(`git push -u origin ${branch} ${tag}`);
+    console.log(`\n✔ Pushed ${tag}. Watch the build: GitHub → Actions. The release appears under Releases when the installers are done.`);
+    process.exit(0);
+  }
+  fail(`${tag} was already released. Raise the version in package.json, src-tauri/tauri.conf.json and src-tauri/Cargo.toml first.`);
+}
 run('git add -A');
 try { run(`git commit -m "Release ${tag}"`); } catch { console.log('• Nothing new to commit'); }
 const branch = out('git rev-parse --abbrev-ref HEAD');
